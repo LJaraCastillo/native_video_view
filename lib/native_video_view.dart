@@ -1,13 +1,13 @@
+library native_video_view;
+
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
-class NativeVideoView {
-  static const MethodChannel _channel =
-      const MethodChannel('native_video_view');
+part 'src/controller.dart';
 
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
-  }
-}
+part 'src/video_widget.dart';
