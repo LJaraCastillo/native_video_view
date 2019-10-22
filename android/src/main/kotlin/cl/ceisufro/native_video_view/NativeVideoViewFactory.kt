@@ -12,7 +12,10 @@ class NativeVideoViewFactory(private val activityState: AtomicInteger,
     : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
 
     override fun create(context: Context?, id: Int, args: Any?): PlatformView {
+        val params = args as Map<String, Any>
         val builder = NativeVideoViewBuilder()
+        if (params.containsKey("showMediaController"))
+            builder.showMediaController(params["showMediaController"] as Boolean)
         return builder.build(id, context, activityState, registrar)
     }
 }

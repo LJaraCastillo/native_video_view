@@ -2,11 +2,13 @@ package cl.ceisufro.native_video_view
 
 import android.app.Activity
 import android.app.Application
-import android.content.Context
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.widget.MediaController
 import android.widget.VideoView
+import androidx.constraintlayout.widget.ConstraintLayout
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.CREATED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.DESTROYED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
@@ -22,10 +24,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 
 class NativeVideoViewController(id: Int,
-                                context: Context?,
                                 activityState: AtomicInteger,
                                 private val registrar: PluginRegistry.Registrar)
     : Application.ActivityLifecycleCallbacks,
+        NativeVideoViewOptionsSink,
         MethodChannel.MethodCallHandler,
         PlatformView,
         MediaPlayer.OnPreparedListener,
@@ -33,21 +35,27 @@ class NativeVideoViewController(id: Int,
         MediaPlayer.OnCompletionListener {
     private val methodChannel: MethodChannel = MethodChannel(registrar.messenger(), "native_video_view_$id")
     private val registrarActivityHashCode: Int
+    private val relativeLayout: ConstraintLayout
     private val videoView: VideoView
+    private val controller: MediaController
     private var dataSource: String? = null
     private var disposed: Boolean = false
     private var initialized: Boolean = false
+    private var showMediaController: Boolean = false
 
     init {
         this.methodChannel.setMethodCallHandler(this)
         this.registrarActivityHashCode = registrar.activity().hashCode()
-        this.videoView = VideoView(context)
+        this.relativeLayout = LayoutInflater.from(registrar.activity())
+                .inflate(R.layout.video_layout, null) as ConstraintLayout
+        this.videoView = relativeLayout.findViewById(R.id.native_video_view)
+        this.controller = MediaController(registrar.activity())
         when (activityState.get()) {
             STOPPED -> {
-                videoView.stopPlayback()
+                stopPlayback()
             }
             PAUSED -> {
-                videoView.pause()
+                pausePlayback()
             }
             RESUMED -> {
                 // Not implemented
@@ -56,7 +64,7 @@ class NativeVideoViewController(id: Int,
                 // Not implemented
             }
             CREATED -> {
-                this.initVideoView()
+                initVideoView()
             }
             DESTROYED -> {
                 // Not implemented
@@ -68,7 +76,7 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun getView(): View {
-        return videoView
+        return relativeLayout
     }
 
     override fun dispose() {
@@ -107,6 +115,16 @@ class NativeVideoViewController(id: Int,
             "player#currentPosition" -> {
                 val arguments = HashMap<String, Any>()
                 arguments["currentPosition"] = videoView.currentPosition
+                result.success(arguments)
+            }
+            "player#isPlaying" -> {
+                val arguments = HashMap<String, Any>()
+                arguments["isPlaying"] = videoView.isPlaying
+                result.success(arguments)
+            }
+            "player#duration" -> {
+                val arguments = HashMap<String, Any>()
+                arguments["duration"] = videoView.duration
                 result.success(arguments)
             }
             "player#seekTo" -> {
@@ -149,11 +167,30 @@ class NativeVideoViewController(id: Int,
         // Not implemented
     }
 
+    override fun showMediaController(showMediaController: Boolean) {
+        this.showMediaController = showMediaController
+        this.determinateControllerVisibility()
+    }
+
     private fun initVideoView() {
+        this.initMediaController()
         videoView.setOnPreparedListener(this)
         videoView.setOnErrorListener(this)
         videoView.setOnCompletionListener(this)
         this.initialized = true
+    }
+
+    private fun initMediaController() {
+        controller.setAnchorView(videoView)
+        videoView.setMediaController(controller)
+        this.determinateControllerVisibility()
+    }
+
+    private fun determinateControllerVisibility() {
+        if (showMediaController)
+            videoView.setMediaController(controller)
+        else
+            videoView.setMediaController(null)
     }
 
     private fun initVideo(dataSource: String?) {
@@ -192,6 +229,7 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun onError(mediaPlayer: MediaPlayer?, what: Int, extra: Int): Boolean {
+        this.dataSource = null
         val arguments = HashMap<String, Any>()
         arguments["what"] = what
         arguments["extra"] = extra
