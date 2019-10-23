@@ -9,13 +9,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  VideoViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,13 +21,16 @@ class _MyAppState extends State<MyApp> {
 
   Widget _buildVideoPlayerWidget() {
     return Container(
+      alignment: Alignment.center,
       child: NativeVideoView(
         showMediaController: true,
         onCreated: (controller) {
-          controller.setVideoFromAsset('assets/example.mp4');
-          _controller = controller;
+          controller.setVideoSource(
+            'assets/example.mp4',
+            sourceType: VideoSourceType.asset,
+          );
         },
-        onPrepared: (controller) {
+        onPrepared: (controller, info) {
           controller.play();
         },
         onError: (controller, what, extra) {
@@ -43,14 +39,6 @@ class _MyAppState extends State<MyApp> {
         onCompletion: (controller) {
           print('Video completed');
         },
-      ),
-    );
-  }
-
-  Widget _buildControlsWidget() {
-    return Container(
-      child: Row(
-        children: <Widget>[],
       ),
     );
   }

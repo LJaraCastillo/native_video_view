@@ -9,6 +9,16 @@ class VideoViewController {
   /// State of the [StatefulWidget].
   final _NativeVideoViewState _videoViewState;
 
+  /// Current video file loaded in the player.
+  /// The [info] attribute is loaded when the player reaches
+  /// the prepared state.
+  VideoFile _videoFile;
+
+  /// Returns the video file loaded in the player.
+  /// The [info] attribute is loaded when the player reaches
+  /// the prepared state.
+  VideoFile get videoFile => _videoFile;
+
   /// Constructor of the class.
   VideoViewController._(
     this.channel,
@@ -34,30 +44,37 @@ class VideoViewController {
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'player#onCompletion':
-        if (_videoViewState.widget.onCompletion != null) {
-          _videoViewState.widget.onCompletion(this);
-        }
+        _videoViewState.widget.onCompletion(this);
         break;
       case 'player#onError':
-        if (_videoViewState.widget.onError != null) {
-          int what = call.arguments['what'] ?? -1;
-          int extra = call.arguments['extra'] ?? -1;
-          _videoViewState.widget.onError(this, what, extra);
-        }
+        _videoFile = null;
+        int what = call.arguments['what'] ?? -1;
+        int extra = call.arguments['extra'] ?? -1;
+        _videoViewState.widget.onError(this, what, extra);
         break;
       case 'player#onPrepared':
-        if (_videoViewState.widget.onPrepared != null) {
-          _videoViewState.widget.onPrepared(this);
-        }
+        VideoInfo videoInfo = VideoInfo._fromJson(call.arguments);
+        _videoFile =
+            _videoFile._copyWith(changes: VideoFile._(info: videoInfo));
+        _videoViewState.widget.onPrepared(this, videoInfo);
         break;
     }
   }
 
   /// Sets the video source from an asset file.
-  Future<void> setVideoFromAsset(String videoAsset) async {
-    assert(videoAsset != null);
-    File file = await _getAssetFile(videoAsset);
-    await setVideoFromFile(file.path);
+  /// The [sourceType] parameter could be [VideoSourceType.asset],
+  /// [VideoSourceType.file] or [VideoSourceType.network]
+  Future<void> setVideoSource(
+    String source, {
+    VideoSourceType sourceType = VideoSourceType.file,
+  }) async {
+    assert(source != null);
+    if (sourceType == VideoSourceType.asset) {
+      File file = await _getAssetFile(source);
+      await _setVideosSource(file.path, sourceType);
+    } else {
+      await _setVideosSource(source, sourceType);
+    }
   }
 
   /// Load an asset file as a temporary file. File is removed when the
@@ -90,17 +107,19 @@ class VideoViewController {
   }
 
   /// Sets the video source from a file in the device memory.
-  Future<void> setVideoFromFile(String videoPath) async {
-    assert(videoPath != null);
-    Map<String, dynamic> args = {"videoPath": videoPath};
-    await channel.invokeMethod<void>("player#setVideoFromFile", args);
-  }
-
-  /// Sets the video from a URL.
-  Future<void> setNetworkVideo(String videoUri) async {
-    assert(videoUri != null);
-    Map<String, dynamic> args = {"videoUri": videoUri};
-    await channel.invokeMethod<void>("player#setNetworkVideo", args);
+  Future<void> _setVideosSource(
+      String videoSource, VideoSourceType sourceType) async {
+    assert(videoSource != null);
+    Map<String, dynamic> args = {
+      "videoSource": videoSource,
+      "sourceType": sourceType.toString(),
+    };
+    try {
+      await channel.invokeMethod<void>("player#setVideoSource", args);
+      _videoFile = VideoFile._(source: videoSource, sourceType: sourceType);
+    } catch (ex) {
+      print(ex);
+    }
   }
 
   /// Starts/resumes the playback of the video.
@@ -139,14 +158,6 @@ class VideoViewController {
   /// Gets the state of the player.
   /// Returns true if the player is playing or false if is stopped or paused.
   Future<bool> isPlaying() async {
-    final result = await channel.invokeMethod("player#isPlaying");
-    return result['isPlaying'];
-  }
-
-  /// Gets the duration of the file.
-  /// Returns the duration of the file in seconds, if no duration
-  /// is available -1 is returned.
-  Future<int> duration() async {
     final result = await channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
   }

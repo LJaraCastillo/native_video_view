@@ -35,7 +35,7 @@ class NativeVideoViewController(id: Int,
         MediaPlayer.OnCompletionListener {
     private val methodChannel: MethodChannel = MethodChannel(registrar.messenger(), "native_video_view_$id")
     private val registrarActivityHashCode: Int
-    private val relativeLayout: ConstraintLayout
+    private val constraintLayout: ConstraintLayout
     private val videoView: VideoView
     private val controller: MediaController
     private var dataSource: String? = null
@@ -46,9 +46,9 @@ class NativeVideoViewController(id: Int,
     init {
         this.methodChannel.setMethodCallHandler(this)
         this.registrarActivityHashCode = registrar.activity().hashCode()
-        this.relativeLayout = LayoutInflater.from(registrar.activity())
+        this.constraintLayout = LayoutInflater.from(registrar.activity())
                 .inflate(R.layout.video_layout, null) as ConstraintLayout
-        this.videoView = relativeLayout.findViewById(R.id.native_video_view)
+        this.videoView = constraintLayout.findViewById(R.id.native_video_view)
         this.controller = MediaController(registrar.activity())
         when (activityState.get()) {
             STOPPED -> {
@@ -76,7 +76,7 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun getView(): View {
-        return relativeLayout
+        return constraintLayout
     }
 
     override fun dispose() {
@@ -89,15 +89,16 @@ class NativeVideoViewController(id: Int,
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "player#setVideoFromFile" -> {
-                val videoPath: String? = call.argument("videoPath")
-                if (videoPath != null)
-                    initVideo("file://$videoPath")
-                result.success(null)
-            }
-            "player#setNetworkVideo" -> {
-                val videoUri: String? = call.argument("videoUri")
-                initVideo(videoUri)
+            "player#setVideoSource" -> {
+                val videoPath: String? = call.argument("videoSource")
+                val sourceType: String? = call.argument("sourceType")
+                if (videoPath != null) {
+                    if (sourceType.equals("asset") || sourceType.equals("file")) {
+                        initVideo("file://$videoPath")
+                    } else {
+                        initVideo(videoPath)
+                    }
+                }
                 result.success(null)
             }
             "player#start" -> {
@@ -120,11 +121,6 @@ class NativeVideoViewController(id: Int,
             "player#isPlaying" -> {
                 val arguments = HashMap<String, Any>()
                 arguments["isPlaying"] = videoView.isPlaying
-                result.success(arguments)
-            }
-            "player#duration" -> {
-                val arguments = HashMap<String, Any>()
-                arguments["duration"] = videoView.duration
                 result.success(arguments)
             }
             "player#seekTo" -> {
@@ -238,6 +234,12 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun onPrepared(mediaPlayer: MediaPlayer?) {
-        methodChannel.invokeMethod("player#onPrepared", null)
+        val arguments = HashMap<String, Any>()
+        if (mediaPlayer != null) {
+            arguments["height"] = mediaPlayer.videoHeight
+            arguments["width"] = mediaPlayer.videoWidth
+            arguments["duration"] = mediaPlayer.duration
+        }
+        methodChannel.invokeMethod("player#onPrepared", arguments)
     }
 }
