@@ -23,10 +23,6 @@ typedef PreparedCallback = void Function(
 /// respective platform, [VideoView] in Android and
 /// [AVPlayer] in iOS.
 class NativeVideoView extends StatefulWidget {
-  /// Determinate if the media controls are
-  /// displayed or not. Default is false.
-  final bool showMediaController;
-
   /// Wraps the [PlatformView] in an [AspectRatio]
   /// to resize the widget once the video is loaded.
   final bool keepAspectRatio;
@@ -50,7 +46,6 @@ class NativeVideoView extends StatefulWidget {
   /// Constructor of the widget.
   const NativeVideoView(
       {Key key,
-      this.showMediaController = false,
       this.keepAspectRatio = false,
       this.onCreated,
       this.onCompletion,
@@ -80,9 +75,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Builds the view based on the platform that runs the app.
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> creationParams = <String, dynamic>{
-      "showMediaController": widget.showMediaController
-    };
+    final Map<String, dynamic> creationParams = <String, dynamic>{};
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _buildVideoView(
           child: AndroidView(

@@ -37,11 +37,9 @@ class NativeVideoViewController(id: Int,
     private val registrarActivityHashCode: Int
     private val constraintLayout: ConstraintLayout
     private val videoView: VideoView
-    private val controller: MediaController
     private var dataSource: String? = null
     private var disposed: Boolean = false
     private var initialized: Boolean = false
-    private var showMediaController: Boolean = false
 
     init {
         this.methodChannel.setMethodCallHandler(this)
@@ -49,7 +47,6 @@ class NativeVideoViewController(id: Int,
         this.constraintLayout = LayoutInflater.from(registrar.activity())
                 .inflate(R.layout.video_layout, null) as ConstraintLayout
         this.videoView = constraintLayout.findViewById(R.id.native_video_view)
-        this.controller = MediaController(registrar.activity())
         when (activityState.get()) {
             STOPPED -> {
                 stopPlayback()
@@ -163,30 +160,11 @@ class NativeVideoViewController(id: Int,
         // Not implemented
     }
 
-    override fun showMediaController(showMediaController: Boolean) {
-        this.showMediaController = showMediaController
-        this.determinateControllerVisibility()
-    }
-
     private fun initVideoView() {
-        this.initMediaController()
         videoView.setOnPreparedListener(this)
         videoView.setOnErrorListener(this)
         videoView.setOnCompletionListener(this)
         this.initialized = true
-    }
-
-    private fun initMediaController() {
-        controller.setAnchorView(videoView)
-        videoView.setMediaController(controller)
-        this.determinateControllerVisibility()
-    }
-
-    private fun determinateControllerVisibility() {
-        if (showMediaController)
-            videoView.setMediaController(controller)
-        else
-            videoView.setMediaController(null)
     }
 
     private fun initVideo(dataSource: String?) {
