@@ -44,19 +44,19 @@ class VideoViewController {
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'player#onCompletion':
-        _videoViewState.widget.onCompletion(this);
+        _videoViewState.onCompletion(this);
         break;
       case 'player#onError':
         _videoFile = null;
         int what = call.arguments['what'] ?? -1;
         int extra = call.arguments['extra'] ?? -1;
-        _videoViewState.widget.onError(this, what, extra);
+        _videoViewState.onError(this, what, extra);
         break;
       case 'player#onPrepared':
         VideoInfo videoInfo = VideoInfo._fromJson(call.arguments);
         _videoFile =
             _videoFile._copyWith(changes: VideoFile._(info: videoInfo));
-        _videoViewState.widget.onPrepared(this, videoInfo);
+        _videoViewState.onPrepared(this, videoInfo);
         break;
     }
   }

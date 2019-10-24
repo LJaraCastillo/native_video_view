@@ -64,6 +64,10 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   final Completer<VideoViewController> _controller =
       Completer<VideoViewController>();
 
+  /// Value of the aspect ratio. Changes depending of the
+  /// loaded file.
+  double _aspectRatio = 4 / 3;
+
   /// Disposes the state and remove the temp files created
   /// by the Widget.
   @override
@@ -100,18 +104,9 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Builds the video view depending of the configuration.
   Widget _buildVideoView({Widget child}) {
     return widget.keepAspectRatio
-        ? FutureBuilder<VideoViewController>(
-            future: _controller.future,
-            builder: (context, snap) {
-              var aspectRatio = 4 / 3;
-              if (snap.hasData) {
-                aspectRatio = snap.data.videoFile?.info?.aspectRatio ?? 4 / 3;
-              }
-              return AspectRatio(
-                child: child,
-                aspectRatio: aspectRatio,
-              );
-            },
+        ? AspectRatio(
+            child: child,
+            aspectRatio: _aspectRatio,
           )
         : child;
   }
@@ -148,6 +143,12 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// source has been loaded and is ready to start playing.
   /// This function calls the widget's [PreparedCallback] instance.
   void onPrepared(VideoViewController controller, VideoInfo videoInfo) {
-    if (widget.onPrepared != null) widget.onPrepared(controller, videoInfo);
+    if (widget.onPrepared != null) {
+      if (videoInfo != null)
+        setState(() {
+          _aspectRatio = videoInfo.aspectRatio;
+        });
+      widget.onPrepared(controller, videoInfo);
+    }
   }
 }
