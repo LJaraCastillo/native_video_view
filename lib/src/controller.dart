@@ -19,6 +19,12 @@ class VideoViewController {
   /// the prepared state.
   VideoFile get videoFile => _videoFile;
 
+  /// Timer to control the progression of the video being played.
+  Timer _progressionController;
+
+  /// Counter of the played time. Time in seconds.
+  int _elapsedTime = 0;
+
   /// Constructor of the class.
   VideoViewController._(
     this.channel,
@@ -125,17 +131,20 @@ class VideoViewController {
   /// Starts/resumes the playback of the video.
   Future<void> play() async {
     await channel.invokeMethod("player#start");
+    _startProgressTimer();
   }
 
   /// Pauses the playback of the video. Use
   /// [play] to resume the playback at any time.
   Future<void> pause() async {
     await channel.invokeMethod("player#pause");
+    _stopProgressTimer();
   }
 
   /// Stops the playback of the video.
   Future<void> stop() async {
     await channel.invokeMethod("player#stop");
+    _stopProgressTimer(resetCount: true);
   }
 
   /// Gets the current position of time in seconds.
@@ -160,5 +169,31 @@ class VideoViewController {
   Future<bool> isPlaying() async {
     final result = await channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
+  }
+
+  /// Starts the timer that monitor the time progression of the playback.
+  void _startProgressTimer() {
+    if (_progressionController == null) {
+      _progressionController =
+          Timer.periodic(Duration(seconds: 1), _onProgressChanged);
+    }
+  }
+
+  /// Stops the progression timer. If [resetCount] is true the elapsed
+  /// time is restarted.
+  void _stopProgressTimer({bool resetCount = false}) {
+    if (_progressionController != null) {
+      _progressionController.cancel();
+      _progressionController = null;
+      if (resetCount) _elapsedTime = 0;
+    }
+  }
+
+  /// Callback called by the timer when an event is called.
+  /// Updates the elapsed time counter and notifies the widget
+  /// state.
+  void _onProgressChanged(Timer timer) {
+    _elapsedTime += 1;
+    _videoViewState.onProgress(_elapsedTime);
   }
 }

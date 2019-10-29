@@ -18,6 +18,9 @@ typedef ErrorCallback = void Function(
 typedef PreparedCallback = void Function(
     VideoViewController controller, VideoInfo videoInfo);
 
+/// Callback that indicates the progression of the media being played.
+typedef ProgressionCallback = void Function(int elapsedTime);
+
 /// Widget that displays a video player.
 /// This widget calls an underlying player in the
 /// respective platform, [VideoView] in Android and
@@ -39,6 +42,10 @@ class NativeVideoView extends StatefulWidget {
   /// when the player had an error loading the video source.
   final ErrorCallback onError;
 
+  /// Instance of [ProgressionCallback] to notify
+  /// when the time progresses while playing.
+  final ProgressionCallback onProgress;
+
   /// Instance of [PreparedCallback] to notify
   /// when the player is ready to start the playback of a video.
   final PreparedCallback onPrepared;
@@ -50,6 +57,7 @@ class NativeVideoView extends StatefulWidget {
       this.onCreated,
       this.onCompletion,
       this.onError,
+      this.onProgress,
       this.onPrepared})
       : super(key: key);
 
@@ -150,5 +158,10 @@ class _NativeVideoViewState extends State<NativeVideoView> {
         });
       widget.onPrepared(controller, videoInfo);
     }
+  }
+
+  /// Function that is called when the player updates the time played.
+  void onProgress(int elapsedTime) {
+    if (widget.onProgress != null) widget.onProgress(elapsedTime);
   }
 }
