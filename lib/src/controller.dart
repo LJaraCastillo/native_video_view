@@ -22,9 +22,6 @@ class VideoViewController {
   /// Timer to control the progression of the video being played.
   Timer _progressionController;
 
-  /// Counter of the played time. Time in seconds.
-  int _elapsedTime = 0;
-
   /// Constructor of the class.
   VideoViewController._(
     this.channel,
@@ -129,22 +126,40 @@ class VideoViewController {
   }
 
   /// Starts/resumes the playback of the video.
-  Future<void> play() async {
-    await channel.invokeMethod("player#start");
-    _startProgressTimer();
+  Future<bool> play() async {
+    try {
+      await channel.invokeMethod("player#start");
+      _startProgressTimer();
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Pauses the playback of the video. Use
   /// [play] to resume the playback at any time.
-  Future<void> pause() async {
-    await channel.invokeMethod("player#pause");
-    _stopProgressTimer();
+  Future<bool> pause() async {
+    try {
+      await channel.invokeMethod("player#pause");
+      _stopProgressTimer();
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Stops the playback of the video.
-  Future<void> stop() async {
-    await channel.invokeMethod("player#stop");
-    _stopProgressTimer(resetCount: true);
+  Future<bool> stop() async {
+    try {
+      await channel.invokeMethod("player#stop");
+      _stopProgressTimer();
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Gets the current position of time in seconds.
@@ -158,10 +173,16 @@ class VideoViewController {
   /// Must give the [position] of the specific second of playback, if
   /// the [position] is bigger than the duration of source the duration
   /// of the video is used as position.
-  Future<void> seekTo(int position) async {
+  Future<bool> seekTo(int position) async {
     assert(position != null);
-    Map<String, dynamic> args = {"position": position};
-    await channel.invokeMethod<void>("player#seekTo", args);
+    try{
+      Map<String, dynamic> args = {"position": position};
+      await channel.invokeMethod<void>("player#seekTo", args);
+      return true;
+    }catch(ex){
+      print(ex);
+    }
+    return false;
   }
 
   /// Gets the state of the player.
@@ -181,19 +202,18 @@ class VideoViewController {
 
   /// Stops the progression timer. If [resetCount] is true the elapsed
   /// time is restarted.
-  void _stopProgressTimer({bool resetCount = false}) {
+  void _stopProgressTimer() {
     if (_progressionController != null) {
       _progressionController.cancel();
       _progressionController = null;
-      if (resetCount) _elapsedTime = 0;
     }
   }
 
   /// Callback called by the timer when an event is called.
   /// Updates the elapsed time counter and notifies the widget
   /// state.
-  void _onProgressChanged(Timer timer) {
-    _elapsedTime += 1;
-    _videoViewState.onProgress(_elapsedTime);
+  void _onProgressChanged(Timer timer) async {
+    int position = await currentPosition();
+    _videoViewState.onProgress(position);
   }
 }

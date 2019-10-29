@@ -1,17 +1,21 @@
 part of native_video_view;
 
-typedef ControlPressed = bool Function(MediaControl control);
+typedef ControlPressedCallback = Future<bool> Function(MediaControl control);
 
-typedef PositionChanged = bool Function(int position);
+typedef PositionChangedCallback = bool Function(int position);
+
+typedef MediaDurationCallback = bool Function(int duration);
 
 class MediaController extends StatefulWidget {
   final Widget child;
-  final ControlPressed onControlPressed;
-  final PositionChanged onPositionChanged;
+  final MediaControlsController controller;
+  final ControlPressedCallback onControlPressed;
+  final PositionChangedCallback onPositionChanged;
 
   const MediaController({
     Key key,
     @required this.child,
+    this.controller,
     this.onControlPressed,
     this.onPositionChanged,
   }) : super(key: key);
@@ -24,6 +28,13 @@ class _MediaControllerState extends State<MediaController> {
   bool _visible = false;
   bool _playing = false;
   double _progress = 0;
+  double _duration = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMediaController();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +101,10 @@ class _MediaControllerState extends State<MediaController> {
 
   Widget _buildProgressionBar() {
     return Slider(
-      onChanged: (double value) {},
+      onChanged: _onSliderPositionChanged,
       value: _progress,
+      min: 0,
+      max: _duration,
     );
   }
 
@@ -102,15 +115,39 @@ class _MediaControllerState extends State<MediaController> {
     );
   }
 
-  void _rewind() {
-    if (widget.onControlPressed != null) {
-      bool succeded = widget.onControlPressed(MediaControl.rwd);
+  void _initMediaController() {
+    if (widget.controller != null) {
+      widget.controller.addPositionChangedListener(_onPositionChanged);
+      widget.controller.addMediaDurationListener(_onDurationChanged);
     }
   }
 
-  void _playPause() {
+  void _onPositionChanged(int position) {
+    setState(() {
+      _progress = position.toDouble();
+    });
+  }
+
+  void _onDurationChanged(int duration) {
+    setState(() {
+      _duration = duration.toDouble();
+    });
+  }
+
+  void _onSliderPositionChanged(double position) {
+    if (widget.onPositionChanged != null)
+      widget.onPositionChanged(position.toInt());
+  }
+
+  void _rewind() {
     if (widget.onControlPressed != null) {
-      bool changed = widget
+      widget.onControlPressed(MediaControl.rwd);
+    }
+  }
+
+  void _playPause() async {
+    if (widget.onControlPressed != null) {
+      bool changed = await widget
           .onControlPressed(_playing ? MediaControl.pause : MediaControl.play);
       if (changed) {
         setState(() {
@@ -120,9 +157,9 @@ class _MediaControllerState extends State<MediaController> {
     }
   }
 
-  void _stop() {
+  void _stop() async {
     if (widget.onControlPressed != null) {
-      bool succeeded = widget.onControlPressed(MediaControl.stop);
+      bool succeeded = await widget.onControlPressed(MediaControl.stop);
       if (succeeded) {
         setState(() {
           _playing = false;
@@ -133,7 +170,7 @@ class _MediaControllerState extends State<MediaController> {
 
   void _forward() {
     if (widget.onControlPressed != null) {
-      bool succeded = widget.onControlPressed(MediaControl.fwd);
+      widget.onControlPressed(MediaControl.fwd);
     }
   }
 
@@ -141,5 +178,35 @@ class _MediaControllerState extends State<MediaController> {
     setState(() {
       _visible = !_visible;
     });
+  }
+}
+
+class MediaControlsController {
+  PositionChangedCallback _positionChangedCallback;
+  MediaDurationCallback _mediaDurationCallback;
+
+  void addPositionChangedListener(
+      PositionChangedCallback positionChangedCallback) {
+    _positionChangedCallback = positionChangedCallback;
+  }
+
+  void clearPositionChangedListener() {
+    _positionChangedCallback = null;
+  }
+
+  void notifyPositionChanged(int position) {
+    if (_positionChangedCallback != null) _positionChangedCallback(position);
+  }
+
+  void addMediaDurationListener(MediaDurationCallback mediaDurationCallback) {
+    _mediaDurationCallback = mediaDurationCallback;
+  }
+
+  void clearMediaDurationListener() {
+    _mediaDurationCallback = null;
+  }
+
+  void notifyMediaDurationListener(int duration) {
+    if (_mediaDurationCallback != null) _mediaDurationCallback(duration);
   }
 }
