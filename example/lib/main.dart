@@ -24,6 +24,7 @@ class _MyAppState extends State<MyApp> {
       alignment: Alignment.center,
       child: NativeVideoView(
         keepAspectRatio: true,
+        showMediaController: true,
         onCreated: (controller) {
           controller.setVideoSource(
             'assets/example.mp4',

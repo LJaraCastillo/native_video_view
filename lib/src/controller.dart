@@ -48,6 +48,7 @@ class VideoViewController {
     switch (call.method) {
       case 'player#onCompletion':
         _videoViewState.onCompletion(this);
+        await stop();
         break;
       case 'player#onError':
         _videoFile = null;
@@ -130,6 +131,7 @@ class VideoViewController {
     try {
       await channel.invokeMethod("player#start");
       _startProgressTimer();
+      _videoViewState.notifyControlChanged(MediaControl.play);
       return true;
     } catch (ex) {
       print(ex);
@@ -143,6 +145,7 @@ class VideoViewController {
     try {
       await channel.invokeMethod("player#pause");
       _stopProgressTimer();
+      _videoViewState.notifyControlChanged(MediaControl.pause);
       return true;
     } catch (ex) {
       print(ex);
@@ -155,6 +158,8 @@ class VideoViewController {
     try {
       await channel.invokeMethod("player#stop");
       _stopProgressTimer();
+      _onProgressChanged(null);
+      _videoViewState.notifyControlChanged(MediaControl.stop);
       return true;
     } catch (ex) {
       print(ex);
@@ -163,23 +168,23 @@ class VideoViewController {
   }
 
   /// Gets the current position of time in seconds.
-  /// Returns the current position of playback in seconds.
+  /// Returns the current position of playback in milliseconds.
   Future<int> currentPosition() async {
     final result = await channel.invokeMethod("player#currentPosition");
     return result['currentPosition'] ?? -1;
   }
 
   /// Moves the cursor of the playback to an specific time.
-  /// Must give the [position] of the specific second of playback, if
+  /// Must give the [position] of the specific millisecond of playback, if
   /// the [position] is bigger than the duration of source the duration
   /// of the video is used as position.
   Future<bool> seekTo(int position) async {
     assert(position != null);
-    try{
+    try {
       Map<String, dynamic> args = {"position": position};
       await channel.invokeMethod<void>("player#seekTo", args);
       return true;
-    }catch(ex){
+    } catch (ex) {
       print(ex);
     }
     return false;
@@ -196,7 +201,7 @@ class VideoViewController {
   void _startProgressTimer() {
     if (_progressionController == null) {
       _progressionController =
-          Timer.periodic(Duration(seconds: 1), _onProgressChanged);
+          Timer.periodic(Duration(milliseconds: 200), _onProgressChanged);
     }
   }
 
@@ -214,6 +219,7 @@ class VideoViewController {
   /// state.
   void _onProgressChanged(Timer timer) async {
     int position = await currentPosition();
-    _videoViewState.onProgress(position);
+    int duration = this.videoFile?.info?.duration ?? 1000;
+    _videoViewState.onProgress(position, duration);
   }
 }
