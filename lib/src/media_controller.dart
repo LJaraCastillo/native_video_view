@@ -1,16 +1,14 @@
 part of native_video_view;
 
-typedef ControlPressedCallback = void Function(MediaControl control);
+typedef _ControlPressedCallback = void Function(_MediaControl control);
 
-typedef PositionChangedCallback = void Function(int position, int duration);
-
-typedef MediaDurationCallback = void Function(int duration);
+typedef _PositionChangedCallback = void Function(int position, int duration);
 
 class _MediaController extends StatefulWidget {
   final Widget child;
   final MediaControlsController controller;
-  final ControlPressedCallback onControlPressed;
-  final PositionChangedCallback onPositionChanged;
+  final _ControlPressedCallback onControlPressed;
+  final _PositionChangedCallback onPositionChanged;
 
   const _MediaController({
     Key key,
@@ -50,18 +48,17 @@ class _MediaControllerState extends State<_MediaController> {
 
   Widget _buildMediaController() {
     return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Offstage(
-        child: _MediaControls(
-          controller: widget.controller,
-          onControlPressed: widget.onControlPressed,
-          onPositionChanged: widget.onPositionChanged,
-        ),
-        offstage: !_visible,
-      )
-    );
+        bottom: 0,
+        left: 0,
+        right: 0,
+        child: Offstage(
+          child: _MediaControls(
+            controller: widget.controller,
+            onControlPressed: widget.onControlPressed,
+            onPositionChanged: widget.onPositionChanged,
+          ),
+          offstage: !_visible,
+        ));
   }
 
   void _toggleController() {
@@ -73,8 +70,8 @@ class _MediaControllerState extends State<_MediaController> {
 
 class _MediaControls extends StatefulWidget {
   final MediaControlsController controller;
-  final ControlPressedCallback onControlPressed;
-  final PositionChangedCallback onPositionChanged;
+  final _ControlPressedCallback onControlPressed;
+  final _PositionChangedCallback onPositionChanged;
 
   const _MediaControls({
     Key key,
@@ -168,19 +165,19 @@ class _MediaControlsState extends State<_MediaControls> {
     }
   }
 
-  void _onControlPressed(MediaControl mediaControl) {
+  void _onControlPressed(_MediaControl mediaControl) {
     switch (mediaControl) {
-      case MediaControl.pause:
+      case _MediaControl.pause:
         setState(() {
           _playing = false;
         });
         break;
-      case MediaControl.play:
+      case _MediaControl.play:
         setState(() {
           _playing = true;
         });
         break;
-      case MediaControl.stop:
+      case _MediaControl.stop:
         setState(() {
           _playing = false;
         });
@@ -204,32 +201,32 @@ class _MediaControlsState extends State<_MediaControls> {
 
   void _rewind() {
     if (widget.onControlPressed != null)
-      widget.onControlPressed(MediaControl.rwd);
+      widget.onControlPressed(_MediaControl.rwd);
   }
 
   void _playPause() async {
     if (widget.onControlPressed != null)
-      widget
-          .onControlPressed(_playing ? MediaControl.pause : MediaControl.play);
+      widget.onControlPressed(
+          _playing ? _MediaControl.pause : _MediaControl.play);
   }
 
   void _stop() async {
     if (widget.onControlPressed != null)
-      widget.onControlPressed(MediaControl.stop);
+      widget.onControlPressed(_MediaControl.stop);
   }
 
   void _forward() {
     if (widget.onControlPressed != null)
-      widget.onControlPressed(MediaControl.fwd);
+      widget.onControlPressed(_MediaControl.fwd);
   }
 }
 
 class MediaControlsController {
-  ControlPressedCallback _controlPressedCallback;
-  PositionChangedCallback _positionChangedCallback;
+  _ControlPressedCallback _controlPressedCallback;
+  _PositionChangedCallback _positionChangedCallback;
 
   void addControlPressedListener(
-      ControlPressedCallback controlPressedCallback) {
+      _ControlPressedCallback controlPressedCallback) {
     _controlPressedCallback = controlPressedCallback;
   }
 
@@ -237,12 +234,12 @@ class MediaControlsController {
     _controlPressedCallback = null;
   }
 
-  void notifyControlPressed(MediaControl mediaControl) {
+  void notifyControlPressed(_MediaControl mediaControl) {
     if (_controlPressedCallback != null) _controlPressedCallback(mediaControl);
   }
 
   void addPositionChangedListener(
-      PositionChangedCallback positionChangedCallback) {
+      _PositionChangedCallback positionChangedCallback) {
     _positionChangedCallback = positionChangedCallback;
   }
 

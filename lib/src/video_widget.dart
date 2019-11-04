@@ -164,7 +164,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
 
   /// Notifies when an action of the player (play, pause & stop) must be
   /// reflected by the media controller view.
-  void notifyControlChanged(MediaControl mediaControl) {
+  void notifyControlChanged(_MediaControl mediaControl) {
     if (_mediaController != null)
       _mediaController.notifyControlPressed(mediaControl);
   }
@@ -204,20 +204,20 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// When a control is pressed in the media controller, the actions are
   /// realized by the [VideoViewController] and then the result is returned
   /// to the media controller to update the view.
-  void _onControlPressed(MediaControl mediaControl) async {
+  void _onControlPressed(_MediaControl mediaControl) async {
     VideoViewController controller = await _controller.future;
     if (controller != null) {
       switch (mediaControl) {
-        case MediaControl.pause:
+        case _MediaControl.pause:
           controller.pause();
           break;
-        case MediaControl.play:
+        case _MediaControl.play:
           controller.play();
           break;
-        case MediaControl.stop:
+        case _MediaControl.stop:
           controller.stop();
           break;
-        case MediaControl.fwd:
+        case _MediaControl.fwd:
           int duration = controller.videoFile?.info?.duration;
           int position = await controller.currentPosition();
           if (duration != null && position != -1) {
@@ -226,7 +226,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
             controller.seekTo(newPosition);
           }
           break;
-        case MediaControl.rwd:
+        case _MediaControl.rwd:
           int position = await controller.currentPosition();
           if (position != -1) {
             int newPosition = position - 3000 < 0 ? 0 : position - 3000;

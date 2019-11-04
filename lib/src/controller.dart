@@ -131,7 +131,7 @@ class VideoViewController {
     try {
       await channel.invokeMethod("player#start");
       _startProgressTimer();
-      _videoViewState.notifyControlChanged(MediaControl.play);
+      _videoViewState.notifyControlChanged(_MediaControl.play);
       return true;
     } catch (ex) {
       print(ex);
@@ -145,7 +145,7 @@ class VideoViewController {
     try {
       await channel.invokeMethod("player#pause");
       _stopProgressTimer();
-      _videoViewState.notifyControlChanged(MediaControl.pause);
+      _videoViewState.notifyControlChanged(_MediaControl.pause);
       return true;
     } catch (ex) {
       print(ex);
@@ -159,7 +159,7 @@ class VideoViewController {
       await channel.invokeMethod("player#stop");
       _stopProgressTimer();
       _onProgressChanged(null);
-      _videoViewState.notifyControlChanged(MediaControl.stop);
+      _videoViewState.notifyControlChanged(_MediaControl.stop);
       return true;
     } catch (ex) {
       print(ex);
