@@ -82,12 +82,12 @@ class _NativeVideoViewState extends State<NativeVideoView> {
 
   /// Controller of the MediaController widget. This is used
   /// to update the.
-  MediaControlsController _mediaController;
+  _MediaControlsController _mediaController;
 
   @override
   void initState() {
     super.initState();
-    _mediaController = MediaControlsController();
+    _mediaController = _MediaControlsController();
   }
 
   /// Disposes the state and remove the temp files created
