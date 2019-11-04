@@ -18,6 +18,9 @@ typedef ErrorCallback = void Function(
 typedef PreparedCallback = void Function(
     VideoViewController controller, VideoInfo videoInfo);
 
+/// Callback that indicates the progression of the media being played.
+typedef ProgressionCallback = void Function(int elapsedTime, int duration);
+
 /// Widget that displays a video player.
 /// This widget calls an underlying player in the
 /// respective platform, [VideoView] in Android and
@@ -26,6 +29,9 @@ class NativeVideoView extends StatefulWidget {
   /// Wraps the [PlatformView] in an [AspectRatio]
   /// to resize the widget once the video is loaded.
   final bool keepAspectRatio;
+
+  /// Shows a default media controller to control the player state.
+  final bool showMediaController;
 
   /// Instance of [ViewCreatedCallback] to notify
   /// when the view is finished creating.
@@ -39,6 +45,10 @@ class NativeVideoView extends StatefulWidget {
   /// when the player had an error loading the video source.
   final ErrorCallback onError;
 
+  /// Instance of [ProgressionCallback] to notify
+  /// when the time progresses while playing.
+  final ProgressionCallback onProgress;
+
   /// Instance of [PreparedCallback] to notify
   /// when the player is ready to start the playback of a video.
   final PreparedCallback onPrepared;
@@ -47,9 +57,11 @@ class NativeVideoView extends StatefulWidget {
   const NativeVideoView(
       {Key key,
       this.keepAspectRatio = false,
+      this.showMediaController = false,
       this.onCreated,
       this.onCompletion,
       this.onError,
+      this.onProgress,
       this.onPrepared})
       : super(key: key);
 
@@ -67,6 +79,16 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Value of the aspect ratio. Changes depending of the
   /// loaded file.
   double _aspectRatio = 4 / 3;
+
+  /// Controller of the MediaController widget. This is used
+  /// to update the.
+  _MediaControlsController _mediaController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mediaController = _MediaControlsController();
+  }
 
   /// Disposes the state and remove the temp files created
   /// by the Widget.
@@ -103,12 +125,20 @@ class _NativeVideoViewState extends State<NativeVideoView> {
 
   /// Builds the video view depending of the configuration.
   Widget _buildVideoView({Widget child}) {
-    return widget.keepAspectRatio
+    Widget videoView = widget.keepAspectRatio
         ? AspectRatio(
             child: child,
             aspectRatio: _aspectRatio,
           )
         : child;
+    return widget.showMediaController
+        ? _MediaController(
+            child: videoView,
+            controller: _mediaController,
+            onControlPressed: _onControlPressed,
+            onPositionChanged: _onPositionChanged,
+          )
+        : videoView;
   }
 
   /// Callback that is called when the view is created in the platform.
@@ -132,6 +162,19 @@ class _NativeVideoViewState extends State<NativeVideoView> {
     if (widget.onCompletion != null) widget.onCompletion(controller);
   }
 
+  /// Notifies when an action of the player (play, pause & stop) must be
+  /// reflected by the media controller view.
+  void notifyControlChanged(_MediaControl mediaControl) {
+    if (_mediaController != null)
+      _mediaController.notifyControlPressed(mediaControl);
+  }
+
+  /// Notifies the player position to the media controller view.
+  void notifyPlayerPosition(int position, int duration) {
+    if (_mediaController != null)
+      _mediaController.notifyPositionChanged(position, duration);
+  }
+
   /// Function that is called when the platform notifies that an error has
   /// occurred during the video source loading.
   /// This function calls the widget's [ErrorCallback] instance.
@@ -143,12 +186,62 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// source has been loaded and is ready to start playing.
   /// This function calls the widget's [PreparedCallback] instance.
   void onPrepared(VideoViewController controller, VideoInfo videoInfo) {
-    if (widget.onPrepared != null) {
-      if (videoInfo != null)
-        setState(() {
-          _aspectRatio = videoInfo.aspectRatio;
-        });
+    if (widget.onPrepared != null && videoInfo != null) {
+      setState(() {
+        _aspectRatio = videoInfo.aspectRatio;
+      });
       widget.onPrepared(controller, videoInfo);
+      notifyPlayerPosition(0, videoInfo.duration);
     }
+  }
+
+  /// Function that is called when the player updates the time played.
+  void onProgress(int position, int duration) {
+    if (widget.onProgress != null) widget.onProgress(position, duration);
+    notifyPlayerPosition(position, duration);
+  }
+
+  /// When a control is pressed in the media controller, the actions are
+  /// realized by the [VideoViewController] and then the result is returned
+  /// to the media controller to update the view.
+  void _onControlPressed(_MediaControl mediaControl) async {
+    VideoViewController controller = await _controller.future;
+    if (controller != null) {
+      switch (mediaControl) {
+        case _MediaControl.pause:
+          controller.pause();
+          break;
+        case _MediaControl.play:
+          controller.play();
+          break;
+        case _MediaControl.stop:
+          controller.stop();
+          break;
+        case _MediaControl.fwd:
+          int duration = controller.videoFile?.info?.duration;
+          int position = await controller.currentPosition();
+          if (duration != null && position != -1) {
+            int newPosition =
+                position + 3000 > duration ? duration : position + 3000;
+            controller.seekTo(newPosition);
+          }
+          break;
+        case _MediaControl.rwd:
+          int position = await controller.currentPosition();
+          if (position != -1) {
+            int newPosition = position - 3000 < 0 ? 0 : position - 3000;
+            controller.seekTo(newPosition);
+          }
+          break;
+      }
+    }
+  }
+
+  /// When the position is changed in the media controller, the action is
+  /// realized by the [VideoViewController] to change the position of
+  /// the video playback.
+  void _onPositionChanged(int position, int duration) async {
+    VideoViewController controller = await _controller.future;
+    if (controller != null) controller.seekTo(position);
   }
 }

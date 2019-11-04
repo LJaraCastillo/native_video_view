@@ -6,7 +6,6 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.MediaController
 import android.widget.VideoView
 import androidx.constraintlayout.widget.ConstraintLayout
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.CREATED
@@ -52,7 +51,7 @@ class NativeVideoViewController(id: Int,
                 stopPlayback()
             }
             PAUSED -> {
-                pausePlayback()
+                pausePlayback(false)
             }
             RESUMED -> {
                 // Not implemented
@@ -79,6 +78,7 @@ class NativeVideoViewController(id: Int,
     override fun dispose() {
         if (disposed) return
         disposed = true
+        initialized = false
         methodChannel.setMethodCallHandler(null)
         videoView.stopPlayback()
         registrar.activity().application.unregisterActivityLifecycleCallbacks(this)
@@ -103,7 +103,7 @@ class NativeVideoViewController(id: Int,
                 result.success(null)
             }
             "player#pause" -> {
-                pausePlayback()
+                pausePlayback(false)
                 result.success(null)
             }
             "player#stop" -> {
@@ -143,7 +143,7 @@ class NativeVideoViewController(id: Int,
 
     override fun onActivityPaused(activity: Activity?) {
         if (disposed || activity.hashCode() != registrarActivityHashCode) return
-        this.pausePlayback()
+        this.pausePlayback(false)
     }
 
     override fun onActivityStopped(activity: Activity?) {
@@ -181,13 +181,15 @@ class NativeVideoViewController(id: Int,
         }
     }
 
-    private fun pausePlayback() {
-        if (videoView.canPause())
+    private fun pausePlayback(restart: Boolean) {
+        if (videoView.canPause()) {
             videoView.pause()
+            if (restart) videoView.seekTo(0)
+        }
     }
 
     private fun stopPlayback() {
-        videoView.stopPlayback()
+        this.pausePlayback(true)
     }
 
     private fun destroyVideoView() {

@@ -10,6 +10,10 @@ import 'package:path_provider/path_provider.dart';
 
 part 'src/controller.dart';
 
+part 'src/media_control.dart';
+
+part 'src/media_controller.dart';
+
 part 'src/video_file.dart';
 
 part 'src/video_source_type.dart';

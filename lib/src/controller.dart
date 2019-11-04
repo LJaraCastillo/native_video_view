@@ -19,6 +19,9 @@ class VideoViewController {
   /// the prepared state.
   VideoFile get videoFile => _videoFile;
 
+  /// Timer to control the progression of the video being played.
+  Timer _progressionController;
+
   /// Constructor of the class.
   VideoViewController._(
     this.channel,
@@ -45,6 +48,7 @@ class VideoViewController {
     switch (call.method) {
       case 'player#onCompletion':
         _videoViewState.onCompletion(this);
+        await stop();
         break;
       case 'player#onError':
         _videoFile = null;
@@ -123,36 +127,67 @@ class VideoViewController {
   }
 
   /// Starts/resumes the playback of the video.
-  Future<void> play() async {
-    await channel.invokeMethod("player#start");
+  Future<bool> play() async {
+    try {
+      await channel.invokeMethod("player#start");
+      _startProgressTimer();
+      _videoViewState.notifyControlChanged(_MediaControl.play);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Pauses the playback of the video. Use
   /// [play] to resume the playback at any time.
-  Future<void> pause() async {
-    await channel.invokeMethod("player#pause");
+  Future<bool> pause() async {
+    try {
+      await channel.invokeMethod("player#pause");
+      _stopProgressTimer();
+      _videoViewState.notifyControlChanged(_MediaControl.pause);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Stops the playback of the video.
-  Future<void> stop() async {
-    await channel.invokeMethod("player#stop");
+  Future<bool> stop() async {
+    try {
+      await channel.invokeMethod("player#stop");
+      _stopProgressTimer();
+      _onProgressChanged(null);
+      _videoViewState.notifyControlChanged(_MediaControl.stop);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Gets the current position of time in seconds.
-  /// Returns the current position of playback in seconds.
+  /// Returns the current position of playback in milliseconds.
   Future<int> currentPosition() async {
     final result = await channel.invokeMethod("player#currentPosition");
     return result['currentPosition'] ?? -1;
   }
 
   /// Moves the cursor of the playback to an specific time.
-  /// Must give the [position] of the specific second of playback, if
+  /// Must give the [position] of the specific millisecond of playback, if
   /// the [position] is bigger than the duration of source the duration
   /// of the video is used as position.
-  Future<void> seekTo(int position) async {
+  Future<bool> seekTo(int position) async {
     assert(position != null);
-    Map<String, dynamic> args = {"position": position};
-    await channel.invokeMethod<void>("player#seekTo", args);
+    try {
+      Map<String, dynamic> args = {"position": position};
+      await channel.invokeMethod<void>("player#seekTo", args);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Gets the state of the player.
@@ -160,5 +195,31 @@ class VideoViewController {
   Future<bool> isPlaying() async {
     final result = await channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
+  }
+
+  /// Starts the timer that monitor the time progression of the playback.
+  void _startProgressTimer() {
+    if (_progressionController == null) {
+      _progressionController =
+          Timer.periodic(Duration(milliseconds: 200), _onProgressChanged);
+    }
+  }
+
+  /// Stops the progression timer. If [resetCount] is true the elapsed
+  /// time is restarted.
+  void _stopProgressTimer() {
+    if (_progressionController != null) {
+      _progressionController.cancel();
+      _progressionController = null;
+    }
+  }
+
+  /// Callback called by the timer when an event is called.
+  /// Updates the elapsed time counter and notifies the widget
+  /// state.
+  void _onProgressChanged(Timer timer) async {
+    int position = await currentPosition();
+    int duration = this.videoFile?.info?.duration ?? 1000;
+    _videoViewState.onProgress(position, duration);
   }
 }
