@@ -6,13 +6,13 @@ typedef PositionChangedCallback = void Function(int position, int duration);
 
 typedef MediaDurationCallback = void Function(int duration);
 
-class MediaController extends StatefulWidget {
+class _MediaController extends StatefulWidget {
   final Widget child;
   final MediaControlsController controller;
   final ControlPressedCallback onControlPressed;
   final PositionChangedCallback onPositionChanged;
 
-  const MediaController({
+  const _MediaController({
     Key key,
     @required this.child,
     this.controller,
@@ -24,8 +24,70 @@ class MediaController extends StatefulWidget {
   _MediaControllerState createState() => _MediaControllerState();
 }
 
-class _MediaControllerState extends State<MediaController> {
+class _MediaControllerState extends State<_MediaController> {
   bool _visible = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        Stack(
+          children: <Widget>[
+            widget.child,
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleController,
+                child: Container(),
+              ),
+            ),
+          ],
+        ),
+        _buildMediaController(),
+      ],
+    );
+  }
+
+  Widget _buildMediaController() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Offstage(
+        child: _MediaControls(
+          controller: widget.controller,
+          onControlPressed: widget.onControlPressed,
+          onPositionChanged: widget.onPositionChanged,
+        ),
+        offstage: !_visible,
+      )
+    );
+  }
+
+  void _toggleController() {
+    setState(() {
+      _visible = !_visible;
+    });
+  }
+}
+
+class _MediaControls extends StatefulWidget {
+  final MediaControlsController controller;
+  final ControlPressedCallback onControlPressed;
+  final PositionChangedCallback onPositionChanged;
+
+  const _MediaControls({
+    Key key,
+    this.controller,
+    this.onControlPressed,
+    this.onPositionChanged,
+  }) : super(key: key);
+
+  @override
+  _MediaControlsState createState() => _MediaControlsState();
+}
+
+class _MediaControlsState extends State<_MediaControls> {
   bool _playing = false;
   double _progress = 0;
   double _duration = 1000;
@@ -44,39 +106,6 @@ class _MediaControllerState extends State<MediaController> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Stack(
-        children: <Widget>[
-          GestureDetector(
-            child: widget.child,
-            onTap: _toggleController,
-          ),
-          _buildMediaController(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMediaController() {
-    Widget child;
-    if (_visible) {
-      child = _buildControls();
-    }
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: AnimatedSwitcher(
-        duration: Duration(milliseconds: 500),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(child: child, opacity: animation);
-        },
-        child: child ?? Container(),
-      ),
-    );
-  }
-
-  Widget _buildControls() {
     return Container(
       color: Colors.black.withOpacity(0.5),
       child: Column(
@@ -192,12 +221,6 @@ class _MediaControllerState extends State<MediaController> {
   void _forward() {
     if (widget.onControlPressed != null)
       widget.onControlPressed(MediaControl.fwd);
-  }
-
-  void _toggleController() {
-    setState(() {
-      _visible = !_visible;
-    });
   }
 }
 

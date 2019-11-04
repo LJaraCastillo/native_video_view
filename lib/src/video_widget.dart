@@ -132,7 +132,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
           )
         : child;
     return widget.showMediaController
-        ? MediaController(
+        ? _MediaController(
             child: videoView,
             controller: _mediaController,
             onControlPressed: _onControlPressed,
