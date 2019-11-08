@@ -34,8 +34,8 @@ class _MyAppState extends State<MyApp> {
         onPrepared: (controller, info) {
           controller.play();
         },
-        onError: (controller, what, extra) {
-          print('Player Error ($what | $extra)');
+        onError: (controller, what, extra, message) {
+          print('Player Error ($what | $extra | $message)');
         },
         onCompletion: (controller) {
           print('Video completed');
