@@ -240,8 +240,9 @@ class _MediaControlsState extends State<_MediaControls> {
   /// time has changed and the control view needs to be updated.
   void _onPositionChanged(int position, int duration) {
     setState(() {
-      _progress = position.toDouble();
-      _duration = duration.toDouble();
+      _progress =
+          position > 0 && position <= duration ? position.toDouble() : 0;
+      _duration = duration > 0 ? duration.toDouble() : 0;
     });
   }
 

@@ -57,10 +57,10 @@ class VideoFile {
 /// This class is loaded once the video is loaded in the player.
 class VideoInfo {
   /// Height of the video file.
-  final double height;
+  final num height;
 
   /// Width of the video file.
-  final double width;
+  final num width;
 
   /// Duration in milliseconds of the file.
   final int duration;
