@@ -7,15 +7,14 @@
 //
 
 import Foundation
-import AVFoundation
 import Flutter
+import AVKit
 
 public class NativeVideoViewController: NSObject, FlutterPlatformView {
     private let frame: CGRect
     private let viewId: Int64
-    private let registrar: FlutterPluginRegistrar
     private let methodChannel: FlutterMethodChannel
-    private let layout: UIView
+    private let videoView: UIView
     private let videoPlayer: AVPlayer
     private let videoPlayerLayer: AVPlayerLayer
     private var initialized: Bool = false
@@ -24,12 +23,11 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
     init(frame:CGRect, viewId:Int64, registrar: FlutterPluginRegistrar) {
         self.frame = frame
         self.viewId = viewId
-        self.registrar = registrar
-        self.layout = UIView(frame: frame)
+        self.videoView = UIView(frame: frame)
         self.videoPlayer = AVPlayer(playerItem: nil)
-        self.videoPlayerLayer = AVPlayerLayer(player: videoPlayer)
-        self.videoPlayerLayer.frame = layout.bounds
-        self.layout.layer.addSublayer(videoPlayerLayer)
+        self.videoPlayerLayer = AVPlayerLayer(player: self.videoPlayer)
+        self.videoPlayerLayer.frame = self.videoView.bounds
+        self.videoView.layer.addSublayer(videoPlayerLayer)
         self.methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
         super.init()
         self.methodChannel.setMethodCallHandler(handle)
@@ -39,11 +37,12 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         self.initialized = false
         self.methodChannel.setMethodCallHandler(nil)
         self.videoPlayer.removeObserver(self, forKeyPath: "status")
+        NotificationCenter.default.removeObserver(self)
         self.stopPlayback()
     }
     
     public func view() -> UIView {
-        return layout
+        return videoView
     }
     
     func handle(call: FlutterMethodCall, result: FlutterResult) -> Void {
@@ -54,8 +53,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
                 let videoPath: String? = args["videoSource"] as? String
                 let sourceType: String? = args["sourceType"] as? String
                 if let path = videoPath{
-                    print(sourceType)
-                    let isUrl: Bool = sourceType != "asset" && sourceType != "file" ? true : false
+                    let isUrl: Bool = sourceType == "VideoSourceType.network" ? true : false
                     initVideo(videoPath: path, isURL: isUrl)
                 }
             }
@@ -75,8 +73,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             break
         case "player#currentPosition":
             var arguments = Dictionary<String, Any>()
-            arguments["position"] = self.getCurrentPosition()
-            print(self.getCurrentPosition())
+            arguments["currentPosition"] = self.getCurrentPosition()
             result(arguments)
             break
         case "player#isPlaying":
@@ -89,7 +86,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             if let args = arguments {
                 let position: Int64? = args["position"] as? Int64
                 if let pos = position {
-                    self.videoPlayer.seek(to: CMTimeMakeWithSeconds(Float64(pos / 1000), 60000))
+                    self.videoPlayer.seek(to: CMTimeMake(pos, 1000), toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
                 }
             }
             result(nil)
@@ -111,13 +108,10 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         }
         if let path = videoPath {
             let uri: URL? = isURL ? URL(string: path) : URL(fileURLWithPath: path)
-            print(path)
-            print(isURL)
-            print(uri?.absoluteString)
             self.videoPlayer.replaceCurrentItem(with: AVPlayerItem(url: uri!))
             // Notifies when the video finishes playing.
             NotificationCenter.default.addObserver(self, selector: Selector(("playerDidFinishPlaying")), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: self.videoPlayer.currentItem)
-            self.dataSource = videoPath
+            self.dataSource = path
         }		
     }
     
@@ -173,9 +167,8 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             case .readyToPlay:
                 var arguments = Dictionary<String, Any>()
                 arguments["duration"] = self.getDuration()
-                arguments["height"] = self.videoPlayerLayer.videoRect.height
-                arguments["width"] = self.videoPlayerLayer.videoRect.width
-                print(arguments)
+                arguments["height"] = self.videoPlayer.currentItem?.presentationSize.height ?? 0
+                arguments["width"] = self.videoPlayer.currentItem?.presentationSize.width ?? 0
                 self.methodChannel.invokeMethod("player#onPrepared", arguments: arguments)
                 break
             case .failed:

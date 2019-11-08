@@ -7,6 +7,8 @@
 //
 
 import Foundation
+import Flutter
+
 public class NativeVideoViewFactory:NSObject, FlutterPlatformViewFactory {
     private let registrar: FlutterPluginRegistrar
     

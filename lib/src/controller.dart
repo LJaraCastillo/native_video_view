@@ -171,7 +171,7 @@ class VideoViewController {
   /// Returns the current position of playback in milliseconds.
   Future<int> currentPosition() async {
     final result = await channel.invokeMethod("player#currentPosition");
-    return result['currentPosition'] ?? -1;
+    return result['currentPosition'] ?? 0;
   }
 
   /// Moves the cursor of the playback to an specific time.
