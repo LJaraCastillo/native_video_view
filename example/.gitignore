@@ -64,6 +64,7 @@
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/IDEWorkspaceChecks.plist
 
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3

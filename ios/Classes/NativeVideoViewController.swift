@@ -8,7 +8,7 @@
 
 import Foundation
 import Flutter
-import AVKit
+import AVFoundation
 
 public class NativeVideoViewController: NSObject, FlutterPlatformView {
     private let frame: CGRect
@@ -110,7 +110,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             let uri: URL? = isURL ? URL(string: path) : URL(fileURLWithPath: path)
             self.videoPlayer.replaceCurrentItem(with: AVPlayerItem(url: uri!))
             // Notifies when the video finishes playing.
-            NotificationCenter.default.addObserver(self, selector: Selector(("playerDidFinishPlaying")), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: self.videoPlayer.currentItem)
+            NotificationCenter.default.addObserver(self, selector: #selector(playerDidFinishPlaying(notification:)), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: self.videoPlayer.currentItem)
             self.dataSource = path
         }		
     }
@@ -154,7 +154,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         return Int64(ts)
     }
     
-    func playerDidFinishPlaying(note: NSNotification){
+    @objc func playerDidFinishPlaying(notification: NSNotification){
         self.methodChannel.invokeMethod("player#onCompletion", arguments: nil)
     }
     
