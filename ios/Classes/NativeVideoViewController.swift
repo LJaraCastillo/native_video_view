@@ -11,22 +11,20 @@ import Flutter
 import AVFoundation
 
 public class NativeVideoViewController: NSObject, FlutterPlatformView {
-    private let frame: CGRect
     private let viewId: Int64
     private let methodChannel: FlutterMethodChannel
     private let videoView: UIView
     private let videoPlayer: AVPlayer
     private let videoPlayerLayer: AVPlayerLayer
     private var initialized: Bool = false
-    private var dataSource: String? = nil
+    private var videoAsset: AVAsset? = nil
     
     init(frame:CGRect, viewId:Int64, registrar: FlutterPluginRegistrar) {
-        self.frame = frame
         self.viewId = viewId
         self.videoView = UIView(frame: frame)
         self.videoPlayer = AVPlayer(playerItem: nil)
         self.videoPlayerLayer = AVPlayerLayer(player: self.videoPlayer)
-        self.videoPlayerLayer.frame = self.videoView.bounds
+        self.videoView.backgroundColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
         self.videoView.layer.addSublayer(videoPlayerLayer)
         self.methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
         super.init()
@@ -102,21 +100,32 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         self.initialized = true
     }
     
+    func updateVideoLayer(width: Double, height:Double) {
+        let videoHeight = self.getVideoWidth()
+        let videoWidth = self.getVideoWidth()
+        let orientation = UIApplication.shared.statusBarOrientation
+        let screenRect = UIScreen.main.bounds
+        var height = 0.0
+        var width = 0.0
+        self.videoPlayerLayer.frame = self.videoView.bounds
+    }
+    
     func initVideo(videoPath:String?, isURL: Bool){
         if !initialized {
             self.initVideoPlayer()
         }
         if let path = videoPath {
             let uri: URL? = isURL ? URL(string: path) : URL(fileURLWithPath: path)
-            self.videoPlayer.replaceCurrentItem(with: AVPlayerItem(url: uri!))
+            let asset = AVAsset(url: uri!)
+            self.videoPlayer.replaceCurrentItem(with: AVPlayerItem(asset: asset))
+            self.videoAsset = asset
             // Notifies when the video finishes playing.
             NotificationCenter.default.addObserver(self, selector: #selector(playerDidFinishPlaying(notification:)), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: self.videoPlayer.currentItem)
-            self.dataSource = path
-        }		
+        }
     }
     
     func startPlayback(){
-        if !self.isPlaying() && self.dataSource != nil {
+        if !self.isPlaying() && self.videoAsset != nil {
             self.videoPlayer.play()
         }
     }
@@ -146,6 +155,33 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         return self.transformCMTime(time: currentTime)
     }
     
+    func getVideoHeight() -> Double {
+        var height: Double = 0.0
+        let videoTrack = self.getVideoTrack()
+        if videoTrack != nil {
+            height = Double(videoTrack?.naturalSize.height ?? 0.0)
+        }
+        return height
+    }
+    
+    func getVideoWidth() -> Double {
+        var width: Double = 0.0
+        let videoTrack = self.getVideoTrack()
+        if videoTrack != nil {
+            width = Double(videoTrack?.naturalSize.width ?? 0.0)
+        }
+        return width
+    }
+    
+    func getVideoTrack() -> AVAssetTrack? {
+        var videoTrack: AVAssetTrack? = nil
+        let tracks = videoAsset?.tracks(withMediaType: .video)
+        if tracks != nil && tracks!.count > 0 {
+            videoTrack = tracks![0]
+        }
+        return videoTrack
+    }
+    
     func transformCMTime(time:CMTime?) -> Int64 {
         var ts : Double = 0
         if let obj = time {
@@ -167,12 +203,15 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             case .readyToPlay:
                 var arguments = Dictionary<String, Any>()
                 arguments["duration"] = self.getDuration()
-                arguments["height"] = self.videoPlayer.currentItem?.presentationSize.height ?? 0
-                arguments["width"] = self.videoPlayer.currentItem?.presentationSize.width ?? 0
+                let height = self.getVideoHeight()
+                let width = self.getVideoWidth()
+                self.updateVideoLayer(width: width, height: height)
+                arguments["height"] = height
+                arguments["width"] = width
                 self.methodChannel.invokeMethod("player#onPrepared", arguments: arguments)
                 break
             case .failed:
-                self.dataSource = nil
+                self.videoAsset = nil
                 var arguments = Dictionary<String, Any>()
                 if let error = self.videoPlayer.error{
                     arguments["message"] = error.localizedDescription
