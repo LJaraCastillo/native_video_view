@@ -7,9 +7,10 @@ typedef ViewCreatedCallback = void Function(VideoViewController controller);
 typedef CompletionCallback = void Function(VideoViewController controller);
 
 /// Callback that is called when the player had an error trying to load/play
-/// the video source.
+/// the video source. The values [what] and [extra] are Android exclusives and
+/// [message] is iOS exclusive.
 typedef ErrorCallback = void Function(
-    VideoViewController controller, int what, int extra);
+    VideoViewController controller, int what, int extra, String message);
 
 /// Callback that is called when the player finished loading the video
 /// source and is prepared to start the playback. The [controller]
@@ -178,8 +179,10 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Function that is called when the platform notifies that an error has
   /// occurred during the video source loading.
   /// This function calls the widget's [ErrorCallback] instance.
-  void onError(VideoViewController controller, int what, int extra) {
-    if (widget.onError != null) widget.onError(controller, what, extra);
+  void onError(
+      VideoViewController controller, int what, int extra, String message) {
+    if (widget.onError != null)
+      widget.onError(controller, what, extra, message);
   }
 
   /// Function that is called when the platform notifies that the video
