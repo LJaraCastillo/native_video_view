@@ -57,17 +57,19 @@ class VideoFile {
 /// This class is loaded once the video is loaded in the player.
 class VideoInfo {
   /// Height of the video file.
-  final int height;
+  final num height;
 
   /// Width of the video file.
-  final int width;
+  final num width;
 
   /// Duration in milliseconds of the file.
   final int duration;
 
   /// Computes the aspect ratio if the [height] and [width] are not null.
   double get aspectRatio =>
-      height != null && width != null ? width / height : 4 / 3;
+      height != null && width != null && height > 0 && width > 0
+          ? width / height
+          : 4 / 3;
 
   /// Hidden constructor of the class. Only the controller
   /// can create an instance of this class.

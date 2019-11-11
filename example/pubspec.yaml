@@ -1,6 +1,7 @@
 name: native_video_view_example
 description: Demonstrates how to use the native_video_view plugin.
 publish_to: 'none'
+version: 1.0.0+100
 
 environment:
   sdk: ">=2.1.0 <3.0.0"

@@ -54,7 +54,8 @@ class VideoViewController {
         _videoFile = null;
         int what = call.arguments['what'] ?? -1;
         int extra = call.arguments['extra'] ?? -1;
-        _videoViewState.onError(this, what, extra);
+        String message = call.arguments['message'];
+        _videoViewState.onError(this, what, extra, message);
         break;
       case 'player#onPrepared':
         VideoInfo videoInfo = VideoInfo._fromJson(call.arguments);
@@ -171,7 +172,7 @@ class VideoViewController {
   /// Returns the current position of playback in milliseconds.
   Future<int> currentPosition() async {
     final result = await channel.invokeMethod("player#currentPosition");
-    return result['currentPosition'] ?? -1;
+    return result['currentPosition'] ?? 0;
   }
 
   /// Moves the cursor of the playback to an specific time.
