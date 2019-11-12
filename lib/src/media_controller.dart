@@ -10,6 +10,12 @@ class _MediaController extends StatefulWidget {
   /// Widget on which the media controls are drawn.
   final Widget child;
 
+  /// Determines if the controller should hide automatically.
+  final bool autoHide;
+
+  /// The time after which the controller will automatically hide.
+  final Duration autoHideTime;
+
   /// Controller to update the media controller view when the
   /// video controller is used to call a playback function.
   final _MediaControlsController controller;
@@ -25,6 +31,8 @@ class _MediaController extends StatefulWidget {
   const _MediaController({
     Key key,
     @required this.child,
+    this.autoHide,
+    this.autoHideTime,
     this.controller,
     this.onControlPressed,
     this.onPositionChanged,
@@ -38,6 +46,21 @@ class _MediaController extends StatefulWidget {
 class _MediaControllerState extends State<_MediaController> {
   /// Determinate if the controls are visible or not over the widget.
   bool _visible = true;
+
+  /// Timer to auto hide the controller after a few seconds.
+  Timer _autoHideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _setAutoHideTimer();
+  }
+
+  @override
+  void dispose() {
+    _cancelAutoHideTimer();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,18 +96,54 @@ class _MediaControllerState extends State<_MediaController> {
           controller: widget.controller,
           onControlPressed: widget.onControlPressed,
           onPositionChanged: widget.onPositionChanged,
+          onTapped: _onControllerTapped,
         ),
         offstage: !_visible,
       ),
     );
   }
 
+  /// This callback is called when the media controller is tapped.
+  void _onControllerTapped() {
+    _setAutoHideTimer();
+  }
+
   /// Changes the state of the visibility of the controls and rebuilds
-  /// the widget.
-  void _toggleController() {
+  /// the widget. If [visibility] is set then is used as a new value of
+  /// visibility.
+  void _toggleController({bool visibility}) {
     setState(() {
-      _visible = !_visible;
+      _visible = visibility ?? !_visible;
     });
+    _resolveAutoHide();
+  }
+
+  /// Resolve if the auto hide timer should be set or cancelled.
+  void _resolveAutoHide() {
+    bool autoHide = widget.autoHide ?? true;
+    if (autoHide) {
+      if (_visible)
+        _setAutoHideTimer();
+      else
+        _cancelAutoHideTimer();
+    }
+  }
+
+  /// Sets the auto hide timer.
+  void _setAutoHideTimer() {
+    _cancelAutoHideTimer();
+    int time = widget.autoHideTime?.inMilliseconds ?? 2000;
+    _autoHideTimer = Timer(Duration(milliseconds: time), () {
+      _toggleController(visibility: false);
+    });
+  }
+
+  /// Cancels the auto hide timer.
+  void _cancelAutoHideTimer() {
+    if (_autoHideTimer != null) {
+      _autoHideTimer.cancel();
+      _autoHideTimer = null;
+    }
   }
 }
 
@@ -101,12 +160,16 @@ class _MediaControls extends StatefulWidget {
   /// is touched.
   final ProgressionCallback onPositionChanged;
 
+  /// Callback to notify when the widget is tapped.
+  final Function onTapped;
+
   /// Constructor of the widget.
   const _MediaControls({
     Key key,
     this.controller,
     this.onControlPressed,
     this.onPositionChanged,
+    this.onTapped,
   }) : super(key: key);
 
   @override
@@ -241,7 +304,7 @@ class _MediaControlsState extends State<_MediaControls> {
   void _onPositionChanged(int position, int duration) {
     setState(() {
       _progress =
-      position > 0 && position <= duration ? position.toDouble() : 0;
+          position > 0 && position <= duration ? position.toDouble() : 0;
       _duration = duration > 0 ? duration.toDouble() : 0;
     });
   }
@@ -252,36 +315,37 @@ class _MediaControlsState extends State<_MediaControls> {
     _onPositionChanged(position.toInt(), _duration.toInt());
     if (widget.onPositionChanged != null)
       widget.onPositionChanged(position.toInt(), _duration.toInt());
+    if (widget.onTapped != null) widget.onTapped();
   }
 
   /// Notifies when the rewind button in the media controller has been pressed
   /// and the playback position needs to be updated through the video controller.
   void _rewind() {
-    if (widget.onControlPressed != null)
-      widget.onControlPressed(_MediaControl.rwd);
+    _notifyControlPressed(_MediaControl.rwd);
   }
 
   /// Notifies when the play/pause button in the media controller has been pressed
   /// and the playback state needs to be updated through the video controller.
   void _playPause() async {
-    if (widget.onControlPressed != null)
-      widget.onControlPressed(
-          _playing ? _MediaControl.pause : _MediaControl.play);
+    _notifyControlPressed(_playing ? _MediaControl.pause : _MediaControl.play);
   }
 
   /// Notifies when the stop button in the media controller has been pressed
   /// and the playback state needs to be updated through the video controller.
   void _stop() async {
     _onPositionChanged(0, _duration.toInt());
-    if (widget.onControlPressed != null)
-      widget.onControlPressed(_MediaControl.stop);
+    _notifyControlPressed(_MediaControl.stop);
   }
 
   /// Notifies when the forward button in the media controller has been pressed
   /// and the playback position needs to be updated through the video controller.
   void _forward() {
-    if (widget.onControlPressed != null)
-      widget.onControlPressed(_MediaControl.fwd);
+    _notifyControlPressed(_MediaControl.fwd);
+  }
+
+  void _notifyControlPressed(_MediaControl control) {
+    if (widget.onControlPressed != null) widget.onControlPressed(control);
+    if (widget.onTapped != null) widget.onTapped();
   }
 }
 
