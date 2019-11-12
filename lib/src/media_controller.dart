@@ -241,7 +241,7 @@ class _MediaControlsState extends State<_MediaControls> {
   void _onPositionChanged(int position, int duration) {
     setState(() {
       _progress =
-          position > 0 && position <= duration ? position.toDouble() : 0;
+      position > 0 && position <= duration ? position.toDouble() : 0;
       _duration = duration > 0 ? duration.toDouble() : 0;
     });
   }
@@ -249,6 +249,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// Notifies when the slider in the media controller has been touched
   /// and the playback position needs to be updated through the video controller.
   void _onSliderPositionChanged(double position) {
+    _onPositionChanged(position.toInt(), _duration.toInt());
     if (widget.onPositionChanged != null)
       widget.onPositionChanged(position.toInt(), _duration.toInt());
   }
@@ -271,6 +272,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// Notifies when the stop button in the media controller has been pressed
   /// and the playback state needs to be updated through the video controller.
   void _stop() async {
+    _onPositionChanged(0, _duration.toInt());
     if (widget.onControlPressed != null)
       widget.onControlPressed(_MediaControl.stop);
   }

@@ -189,12 +189,12 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// source has been loaded and is ready to start playing.
   /// This function calls the widget's [PreparedCallback] instance.
   void onPrepared(VideoViewController controller, VideoInfo videoInfo) {
-    if (widget.onPrepared != null && videoInfo != null) {
+    if (videoInfo != null) {
       setState(() {
         _aspectRatio = videoInfo.aspectRatio;
       });
-      widget.onPrepared(controller, videoInfo);
       notifyPlayerPosition(0, videoInfo.duration);
+      if (widget.onPrepared != null) widget.onPrepared(controller, videoInfo);
     }
   }
 
@@ -227,13 +227,16 @@ class _NativeVideoViewState extends State<NativeVideoView> {
             int newPosition =
                 position + 3000 > duration ? duration : position + 3000;
             controller.seekTo(newPosition);
+            notifyPlayerPosition(newPosition, duration);
           }
           break;
         case _MediaControl.rwd:
+          int duration = controller.videoFile?.info?.duration;
           int position = await controller.currentPosition();
-          if (position != -1) {
+          if (duration != null && position != -1) {
             int newPosition = position - 3000 < 0 ? 0 : position - 3000;
             controller.seekTo(newPosition);
+            notifyPlayerPosition(newPosition, duration);
           }
           break;
       }
