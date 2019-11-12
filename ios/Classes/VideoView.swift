@@ -9,10 +9,10 @@ import UIKit
 import AVFoundation
 
 class VideoView : UIView {
-    var playerLayer: AVPlayerLayer?
-    var player: AVPlayer?
-    var videoAsset: AVAsset?
-    var initialized: Bool = false
+    private var playerLayer: AVPlayerLayer?
+    private var player: AVPlayer?
+    private var videoAsset: AVAsset?
+    private var initialized: Bool = false
     private var onPrepared: (()-> Void)? = nil
     private var onFailed: ((String) -> Void)? = nil
     private var onCompletion: (() -> Void)? = nil
@@ -56,7 +56,7 @@ class VideoView : UIView {
         }
     }
     
-    func configureVideoLayer(){
+    private func configureVideoLayer(){
         playerLayer = AVPlayerLayer(player: player)
         playerLayer?.frame = bounds
         playerLayer?.videoGravity = .resize
@@ -66,13 +66,13 @@ class VideoView : UIView {
         }
     }
     
-    func clearSubLayers(){
+    private func clearSubLayers(){
         layer.sublayers?.forEach{
             $0.removeFromSuperlayer()
         }
     }
     
-    func initVideoPlayer(){
+    private func initVideoPlayer(){
         self.player = AVPlayer(playerItem: nil)
         self.player?.addObserver(self, forKeyPath: "status", options: [], context: nil)
         self.initialized = true
@@ -136,7 +136,7 @@ class VideoView : UIView {
         return videoTrack
     }
     
-    func transformCMTime(time:CMTime?) -> Int64 {
+    private func transformCMTime(time:CMTime?) -> Int64 {
         var ts : Double = 0
         if let obj = time {
             ts = CMTimeGetSeconds(obj) * 1000
