@@ -61,18 +61,19 @@ class NativeVideoView extends StatefulWidget {
   final PreparedCallback onPrepared;
 
   /// Constructor of the widget.
-  const NativeVideoView(
-      {Key key,
-      this.keepAspectRatio,
-      this.showMediaController,
-      this.autoHide,
-      this.autoHideTime,
-      this.onCreated,
-      this.onCompletion,
-      this.onError,
-      this.onProgress,
-      this.onPrepared})
-      : super(key: key);
+  const NativeVideoView({
+    Key key,
+    this.keepAspectRatio,
+    this.showMediaController,
+    this.autoHide,
+    this.autoHideTime,
+    @required this.onCreated,
+    @required this.onPrepared,
+    @required this.onCompletion,
+    this.onError,
+    this.onProgress,
+  })  : assert(onCreated != null && onPrepared != null && onCompletion != null),
+        super(key: key);
 
   @override
   _NativeVideoViewState createState() => _NativeVideoViewState();
