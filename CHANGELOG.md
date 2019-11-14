@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+* Removed conflicting file in iOS folder
+
 ## 0.1.0
 
 * Widget to play videos.
