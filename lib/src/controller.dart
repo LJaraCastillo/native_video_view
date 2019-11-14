@@ -47,8 +47,9 @@ class VideoViewController {
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'player#onCompletion':
+        _stopProgressTimer();
+        _videoViewState.notifyControlChanged(_MediaControl.stop);
         _videoViewState.onCompletion(this);
-        await stop();
         break;
       case 'player#onError':
         _videoFile = null;
@@ -202,7 +203,7 @@ class VideoViewController {
   void _startProgressTimer() {
     if (_progressionController == null) {
       _progressionController =
-          Timer.periodic(Duration(milliseconds: 200), _onProgressChanged);
+          Timer.periodic(Duration(milliseconds: 100), _onProgressChanged);
     }
   }
 
