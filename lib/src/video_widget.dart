@@ -34,6 +34,12 @@ class NativeVideoView extends StatefulWidget {
   /// Shows a default media controller to control the player state.
   final bool showMediaController;
 
+  /// Determines if the controller should hide automatically.
+  final bool autoHide;
+
+  /// The time after which the controller will automatically hide.
+  final Duration autoHideTime;
+
   /// Instance of [ViewCreatedCallback] to notify
   /// when the view is finished creating.
   final ViewCreatedCallback onCreated;
@@ -57,8 +63,10 @@ class NativeVideoView extends StatefulWidget {
   /// Constructor of the widget.
   const NativeVideoView(
       {Key key,
-      this.keepAspectRatio = false,
-      this.showMediaController = false,
+      this.keepAspectRatio,
+      this.showMediaController,
+      this.autoHide,
+      this.autoHideTime,
       this.onCreated,
       this.onCompletion,
       this.onError,
@@ -126,16 +134,20 @@ class _NativeVideoViewState extends State<NativeVideoView> {
 
   /// Builds the video view depending of the configuration.
   Widget _buildVideoView({Widget child}) {
-    Widget videoView = widget.keepAspectRatio
+    bool keepAspectRatio = widget.keepAspectRatio ?? false;
+    bool showMediaController = widget.showMediaController ?? false;
+    Widget videoView = keepAspectRatio
         ? AspectRatio(
             child: child,
             aspectRatio: _aspectRatio,
           )
         : child;
-    return widget.showMediaController
+    return showMediaController
         ? _MediaController(
             child: videoView,
             controller: _mediaController,
+            autoHide: widget.autoHide,
+            autoHideTime: widget.autoHideTime,
             onControlPressed: _onControlPressed,
             onPositionChanged: _onPositionChanged,
           )
