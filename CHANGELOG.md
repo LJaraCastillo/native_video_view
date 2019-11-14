@@ -1,3 +1,8 @@
-## 0.0.1
+# Changelog
 
-* TODO: Describe initial release.
+## 0.1.0
+
+* Widget to play videos.
+* Media controls widget.
+* Callbacks to control the state of the player.
+* Use of platform view to display the player in each platform.

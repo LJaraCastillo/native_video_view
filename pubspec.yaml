@@ -1,8 +1,8 @@
 name: native_video_view
 description: A new flutter plugin project.
-version: 0.0.1
-author:
-homepage:
+version: 0.1.0
+author: Luis Andrés Jara Castillo <luisandres.jaracastillo@gmail.com>
+homepage: https://github.com/LJaraCastillo/native_video_view
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  path_provider: ^1.4.0
 
 dev_dependencies:
   flutter_test:
