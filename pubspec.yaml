@@ -1,6 +1,6 @@
 name: native_video_view
-description: A new flutter plugin project.
-version: 0.1.1
+description: A video player widget displayed using the platform native player (VideoView in Android and AVPlayer in iOS).
+version: 0.1.2
 author: Luis Andrés Jara Castillo <luisandres.jaracastillo@gmail.com>
 homepage: https://github.com/LJaraCastillo/native_video_view
 

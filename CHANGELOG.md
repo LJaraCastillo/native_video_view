@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+* Added a better description in pubspec.yaml
+
 ## 0.1.1
 
 * Removed conflicting file in iOS folder
