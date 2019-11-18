@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+* Removed flutter.jar dependency in build.gradle
+
 ## 0.1.2
 
 * Added a better description in pubspec.yaml
