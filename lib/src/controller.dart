@@ -43,6 +43,12 @@ class VideoViewController {
     );
   }
 
+  /// Disposes and stops some tasks from the controller.
+  void dispose() {
+    _stopProgressTimer();
+    _cleanTempFile();
+  }
+
   /// Handle the calls from the listeners of state of the player.
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
@@ -87,20 +93,26 @@ class VideoViewController {
   /// VideoView is disposed.
   /// Returns the file path of the temporary file.
   Future<File> _getAssetFile(String asset) async {
-    Directory directory = await getApplicationDocumentsDirectory();
-    var tempFile = File("${directory.path}/temp.mp4");
+    var tempFile = await _createTempFile();
     ByteData data = await rootBundle.load(asset);
     List<int> bytes =
         data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-    if (!tempFile.existsSync()) tempFile.createSync(recursive: true);
     return tempFile.writeAsBytes(bytes);
+  }
+
+  /// Creates a new empty file. If the file exists, then is recreated to
+  /// ensure that the file is empty.
+  Future<File> _createTempFile() async {
+    var tempFile = await _getTempFile();
+    if (tempFile.existsSync()) tempFile.deleteSync();
+    tempFile.createSync();
+    return tempFile;
   }
 
   /// Remove the temporary file used for playing assets.
   /// Returns true if the file was removed or file if not.
   Future<bool> _cleanTempFile() async {
-    Directory directory = await getApplicationDocumentsDirectory();
-    var tempFile = File("${directory.path}/temp.mp4");
+    var tempFile = await _getTempFile();
     if (tempFile.existsSync()) {
       try {
         tempFile.deleteSync();
@@ -110,6 +122,12 @@ class VideoViewController {
       }
     }
     return false;
+  }
+
+  /// Returns the temp file for this instance of the widget.
+  Future<File> _getTempFile() async {
+    Directory directory = await getTemporaryDirectory();
+    return File("${directory.path}/temp_${channel.name}.mp4");
   }
 
   /// Sets the video source from a file in the device memory.

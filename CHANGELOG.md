@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+* Improved Android dispose mechanism.
+* Added controller dispose method.
+* Fixes in temp file lifecycle.
+
 ## 0.1.3
 
 * Removed flutter.jar dependency in build.gradle
