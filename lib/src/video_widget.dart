@@ -166,7 +166,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Disposes the controller of the player.
   void _disposeController() async {
     final controller = await _controller.future;
-    if (controller != null) controller._cleanTempFile();
+    if (controller != null) controller.dispose();
   }
 
   /// Function that is called when the platform notifies that the video has

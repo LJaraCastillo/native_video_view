@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.VideoView
@@ -22,7 +23,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 
-class NativeVideoViewController(id: Int,
+class NativeVideoViewController(private val id: Int,
                                 activityState: AtomicInteger,
                                 private val registrar: PluginRegistry.Registrar)
     : Application.ActivityLifecycleCallbacks,
@@ -38,7 +39,8 @@ class NativeVideoViewController(id: Int,
     private val videoView: VideoView
     private var dataSource: String? = null
     private var disposed: Boolean = false
-    private var initialized: Boolean = false
+    private var configured: Boolean = false
+    private var playerState: PlayerState = PlayerState.NOT_INITIALIZED
 
     init {
         this.methodChannel.setMethodCallHandler(this)
@@ -51,7 +53,7 @@ class NativeVideoViewController(id: Int,
                 stopPlayback()
             }
             PAUSED -> {
-                pausePlayback(false)
+                pausePlayback()
             }
             RESUMED -> {
                 // Not implemented
@@ -60,7 +62,7 @@ class NativeVideoViewController(id: Int,
                 // Not implemented
             }
             CREATED -> {
-                initVideoView()
+                configurePlayer()
             }
             DESTROYED -> {
                 // Not implemented
@@ -78,10 +80,10 @@ class NativeVideoViewController(id: Int,
     override fun dispose() {
         if (disposed) return
         disposed = true
-        initialized = false
         methodChannel.setMethodCallHandler(null)
-        videoView.stopPlayback()
+        this.destroyVideoView()
         registrar.activity().application.unregisterActivityLifecycleCallbacks(this)
+        Log.d("VIDEO. NVV", "Disposed view $id")
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -90,7 +92,8 @@ class NativeVideoViewController(id: Int,
                 val videoPath: String? = call.argument("videoSource")
                 val sourceType: String? = call.argument("sourceType")
                 if (videoPath != null) {
-                    if (sourceType.equals("asset") || sourceType.equals("file")) {
+                    if (sourceType.equals("VideoSourceType.asset")
+                            || sourceType.equals("VideoSourceType.file")) {
                         initVideo("file://$videoPath")
                     } else {
                         initVideo(videoPath)
@@ -103,7 +106,7 @@ class NativeVideoViewController(id: Int,
                 result.success(null)
             }
             "player#pause" -> {
-                pausePlayback(false)
+                pausePlayback()
                 result.success(null)
             }
             "player#stop" -> {
@@ -130,7 +133,7 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun onActivityCreated(activity: Activity?, p1: Bundle?) {
-        this.initVideoView()
+        this.configurePlayer()
     }
 
     override fun onActivityStarted(activity: Activity?) {
@@ -143,7 +146,7 @@ class NativeVideoViewController(id: Int,
 
     override fun onActivityPaused(activity: Activity?) {
         if (disposed || activity.hashCode() != registrarActivityHashCode) return
-        this.pausePlayback(false)
+        this.pausePlayback()
     }
 
     override fun onActivityStopped(activity: Activity?) {
@@ -160,15 +163,15 @@ class NativeVideoViewController(id: Int,
         // Not implemented
     }
 
-    private fun initVideoView() {
+    private fun configurePlayer() {
         videoView.setOnPreparedListener(this)
         videoView.setOnErrorListener(this)
         videoView.setOnCompletionListener(this)
-        this.initialized = true
+        this.configured = true
     }
 
     private fun initVideo(dataSource: String?) {
-        if (!initialized) this.initVideoView()
+        if (!configured) this.configurePlayer()
         if (dataSource != null) {
             this.videoView.setVideoPath(dataSource)
             this.dataSource = dataSource
@@ -176,36 +179,45 @@ class NativeVideoViewController(id: Int,
     }
 
     private fun startPlayback() {
-        if (!videoView.isPlaying && dataSource != null) {
-            videoView.start()
+        if (playerState != PlayerState.PLAYING && dataSource != null) {
+            if (playerState != PlayerState.NOT_INITIALIZED) {
+                videoView.start()
+                playerState = PlayerState.PLAYING
+            } else {
+                playerState = PlayerState.PLAY_WHEN_READY
+                initVideo(dataSource)
+            }
         }
     }
 
-    private fun pausePlayback(restart: Boolean) {
+    private fun pausePlayback() {
         if (videoView.canPause()) {
             videoView.pause()
-            if (restart) videoView.seekTo(0)
+            playerState = PlayerState.PAUSED
         }
     }
 
     private fun stopPlayback() {
-        this.pausePlayback(true)
+        videoView.stopPlayback()
+        playerState = PlayerState.NOT_INITIALIZED
     }
 
     private fun destroyVideoView() {
-        this.stopPlayback()
+        videoView.stopPlayback()
         videoView.setOnPreparedListener(null)
         videoView.setOnErrorListener(null)
         videoView.setOnCompletionListener(null)
-        this.initialized = false
+        configured = false
     }
 
     override fun onCompletion(mediaPlayer: MediaPlayer?) {
+        stopPlayback()
         methodChannel.invokeMethod("player#onCompletion", null)
     }
 
     override fun onError(mediaPlayer: MediaPlayer?, what: Int, extra: Int): Boolean {
-        this.dataSource = null
+        dataSource = null
+        playerState = PlayerState.NOT_INITIALIZED
         val arguments = HashMap<String, Any>()
         arguments["what"] = what
         arguments["extra"] = extra
@@ -214,12 +226,20 @@ class NativeVideoViewController(id: Int,
     }
 
     override fun onPrepared(mediaPlayer: MediaPlayer?) {
+        if (playerState == PlayerState.PLAY_WHEN_READY)
+            this.startPlayback()
+        else
+            notifyPlayerPrepared(mediaPlayer)
+    }
+
+    private fun notifyPlayerPrepared(mediaPlayer: MediaPlayer?) {
         val arguments = HashMap<String, Any>()
         if (mediaPlayer != null) {
             arguments["height"] = mediaPlayer.videoHeight
             arguments["width"] = mediaPlayer.videoWidth
             arguments["duration"] = mediaPlayer.duration
         }
+        playerState = PlayerState.PREPARED
         methodChannel.invokeMethod("player#onPrepared", arguments)
     }
 }
