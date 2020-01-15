@@ -2,7 +2,6 @@ package cl.ceisufro.native_video_view
 
 import android.app.Activity
 import android.app.Application
-import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -16,22 +15,16 @@ import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.RESUMED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STARTED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STOPPED
-import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
-import com.google.android.exoplayer2.source.ExtractorMediaSource
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.smoothstreaming.DefaultSsChunkSource
-import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.util.Util
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
@@ -67,7 +60,6 @@ class ExoPlayerController(private val id: Int,
         this.exoPlayer = SimpleExoPlayer.Builder(registrar.activity())
                 .setTrackSelector(trackSelector)
                 .build()
-        this.exoPlayer.setVideoSurfaceView(surfaceView)
         when (activityState.get()) {
             STOPPED -> {
                 stopPlayback()
@@ -144,9 +136,9 @@ class ExoPlayerController(private val id: Int,
                 result.success(arguments)
             }
             "player#seekTo" -> {
-                val position: Long? = call.argument("position")
+                val position: Int? = call.argument("position")
                 if (position != null)
-                    exoPlayer.seekTo(position)
+                    exoPlayer.seekTo(position.toLong())
                 result.success(null)
             }
         }
@@ -184,17 +176,40 @@ class ExoPlayerController(private val id: Int,
     }
 
     private fun configurePlayer() {
-        exoPlayer.addListener(this)
-        exoPlayer.addListener(this)
-        this.configured = true
+        try {
+            exoPlayer.addListener(this)
+            exoPlayer.setVideoSurfaceView(surfaceView)
+            configured = true
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
     }
 
     private fun initVideo(dataSource: String?) {
         if (!configured) this.configurePlayer()
         if (dataSource != null) {
-//            val mediaSource =
+            val uri = Uri.parse(dataSource)
+            val dataSourceFactory = getDataSourceFactory(uri)
+            val mediaSource = ProgressiveMediaSource
+                    .Factory(dataSourceFactory, DefaultExtractorsFactory())
+                    .createMediaSource(uri)
+            this.exoPlayer.playWhenReady = false
             this.exoPlayer.prepare(mediaSource)
             this.dataSource = dataSource
+        }
+    }
+
+    private fun getDataSourceFactory(uri: Uri): DataSource.Factory {
+        val scheme: String? = uri.scheme
+        return if (scheme != null && (scheme == "http" || scheme == "https")) {
+            DefaultHttpDataSourceFactory(
+                    "ExoPlayer",
+                    null,
+                    DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
+                    DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS,
+                    true)
+        } else {
+            DefaultDataSourceFactory(registrar.activity(), "ExoPlayer")
         }
     }
 
@@ -223,6 +238,7 @@ class ExoPlayerController(private val id: Int,
     private fun destroyVideoView() {
         exoPlayer.stop(true)
         exoPlayer.removeListener(this)
+        exoPlayer.release()
         configured = false
     }
 

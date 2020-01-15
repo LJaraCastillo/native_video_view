@@ -27,8 +27,8 @@ class _MyAppState extends State<MyApp> {
         showMediaController: true,
         onCreated: (controller) {
           controller.setVideoSource(
-            '/storage/emulated/0/example.mp4',
-            sourceType: VideoSourceType.file,
+            'assets/example.mp4',
+            sourceType: VideoSourceType.asset,
           );
         },
         onPrepared: (controller, info) {

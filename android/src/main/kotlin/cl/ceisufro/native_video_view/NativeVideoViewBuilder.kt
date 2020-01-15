@@ -9,9 +9,9 @@ class NativeVideoViewBuilder : NativeVideoViewOptionsSink {
 
     fun build(id: Int, state: AtomicInteger, registrar: PluginRegistry.Registrar): PlatformView {
         return if (useExoPlayer) {
-            NativeVideoViewController(id, state, registrar)
-        } else {
             ExoPlayerController(id, state, registrar)
+        } else {
+            NativeVideoViewController(id, state, registrar)
         }
     }
 
