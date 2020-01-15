@@ -7,12 +7,18 @@ import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 import java.util.concurrent.atomic.AtomicInteger
 
+
 class NativeVideoViewFactory(private val activityState: AtomicInteger,
                              private val registrar: PluginRegistry.Registrar)
     : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
 
     override fun create(context: Context?, id: Int, args: Any?): PlatformView {
+        val params = args as Map<String, Any?>
         val builder = NativeVideoViewBuilder()
+        if (params.containsKey("useExoPlayer")) {
+            val useExoPlayer = params["useExoPlayer"] as Boolean
+            builder.setUseExoPlayer(useExoPlayer)
+        }
         return builder.build(id, activityState, registrar)
     }
 }

@@ -34,6 +34,11 @@ class NativeVideoView extends StatefulWidget {
   /// Shows a default media controller to control the player state.
   final bool showMediaController;
 
+  /// Forces the use of ExoPlayer instead of the native VideoView.
+  ///
+  /// Only in Android.
+  final bool useExoPlayer;
+
   /// Determines if the controller should hide automatically.
   final bool autoHide;
 
@@ -65,6 +70,7 @@ class NativeVideoView extends StatefulWidget {
     Key key,
     this.keepAspectRatio,
     this.showMediaController,
+    this.useExoPlayer,
     this.autoHide,
     this.autoHideTime,
     @required this.onCreated,
@@ -111,7 +117,9 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Builds the view based on the platform that runs the app.
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> creationParams = <String, dynamic>{};
+    final Map<String, dynamic> creationParams = <String, dynamic>{
+      'useExoPlayer': widget.useExoPlayer ?? false,
+    };
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _buildVideoView(
           child: AndroidView(
