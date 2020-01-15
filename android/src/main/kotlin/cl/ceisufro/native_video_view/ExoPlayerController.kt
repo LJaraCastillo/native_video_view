@@ -2,12 +2,12 @@ package cl.ceisufro.native_video_view
 
 import android.app.Activity
 import android.app.Application
-import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.SurfaceView
 import android.view.View
-import android.widget.VideoView
 import androidx.constraintlayout.widget.ConstraintLayout
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.CREATED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.DESTROYED
@@ -15,6 +15,16 @@ import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.RESUMED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STARTED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STOPPED
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
@@ -23,19 +33,18 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 
-class NativeVideoViewController(private val id: Int,
-                                activityState: AtomicInteger,
-                                private val registrar: PluginRegistry.Registrar)
+class ExoPlayerController(private val id: Int,
+                          activityState: AtomicInteger,
+                          private val registrar: PluginRegistry.Registrar)
     : Application.ActivityLifecycleCallbacks,
         MethodChannel.MethodCallHandler,
         PlatformView,
-        MediaPlayer.OnPreparedListener,
-        MediaPlayer.OnErrorListener,
-        MediaPlayer.OnCompletionListener {
+        Player.EventListener {
     private val methodChannel: MethodChannel = MethodChannel(registrar.messenger(), "native_video_view_$id")
     private val registrarActivityHashCode: Int
     private val constraintLayout: ConstraintLayout
-    private val videoView: VideoView
+    private val surfaceView: SurfaceView
+    private val exoPlayer: SimpleExoPlayer
     private var dataSource: String? = null
     private var disposed: Boolean = false
     private var configured: Boolean = false
@@ -45,8 +54,12 @@ class NativeVideoViewController(private val id: Int,
         this.methodChannel.setMethodCallHandler(this)
         this.registrarActivityHashCode = registrar.activity().hashCode()
         this.constraintLayout = LayoutInflater.from(registrar.activity())
-                .inflate(R.layout.video_layout, null) as ConstraintLayout
-        this.videoView = constraintLayout.findViewById(R.id.native_video_view)
+                .inflate(R.layout.exoplayer_layout, null) as ConstraintLayout
+        this.surfaceView = constraintLayout.findViewById(R.id.exo_player_surface_view)
+        val trackSelector = DefaultTrackSelector(registrar.activity())
+        this.exoPlayer = SimpleExoPlayer.Builder(registrar.activity())
+                .setTrackSelector(trackSelector)
+                .build()
         when (activityState.get()) {
             STOPPED -> {
                 stopPlayback()
@@ -114,18 +127,18 @@ class NativeVideoViewController(private val id: Int,
             }
             "player#currentPosition" -> {
                 val arguments = HashMap<String, Any>()
-                arguments["currentPosition"] = videoView.currentPosition
+                arguments["currentPosition"] = exoPlayer.currentPosition
                 result.success(arguments)
             }
             "player#isPlaying" -> {
                 val arguments = HashMap<String, Any>()
-                arguments["isPlaying"] = videoView.isPlaying
+                arguments["isPlaying"] = exoPlayer.isPlaying
                 result.success(arguments)
             }
             "player#seekTo" -> {
                 val position: Int? = call.argument("position")
                 if (position != null)
-                    videoView.seekTo(position)
+                    exoPlayer.seekTo(position.toLong())
                 result.success(null)
             }
         }
@@ -163,25 +176,47 @@ class NativeVideoViewController(private val id: Int,
     }
 
     private fun configurePlayer() {
-        videoView.setOnPreparedListener(this)
-        videoView.setOnErrorListener(this)
-        videoView.setOnCompletionListener(this)
-        videoView.setZOrderOnTop(true)
-        this.configured = true
+        try {
+            exoPlayer.addListener(this)
+            exoPlayer.setVideoSurfaceView(surfaceView)
+            configured = true
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
     }
 
     private fun initVideo(dataSource: String?) {
         if (!configured) this.configurePlayer()
         if (dataSource != null) {
-            this.videoView.setVideoPath(dataSource)
+            val uri = Uri.parse(dataSource)
+            val dataSourceFactory = getDataSourceFactory(uri)
+            val mediaSource = ProgressiveMediaSource
+                    .Factory(dataSourceFactory, DefaultExtractorsFactory())
+                    .createMediaSource(uri)
+            this.exoPlayer.playWhenReady = false
+            this.exoPlayer.prepare(mediaSource)
             this.dataSource = dataSource
+        }
+    }
+
+    private fun getDataSourceFactory(uri: Uri): DataSource.Factory {
+        val scheme: String? = uri.scheme
+        return if (scheme != null && (scheme == "http" || scheme == "https")) {
+            DefaultHttpDataSourceFactory(
+                    "ExoPlayer",
+                    null,
+                    DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
+                    DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS,
+                    true)
+        } else {
+            DefaultDataSourceFactory(registrar.activity(), "ExoPlayer")
         }
     }
 
     private fun startPlayback() {
         if (playerState != PlayerState.PLAYING && dataSource != null) {
             if (playerState != PlayerState.NOT_INITIALIZED) {
-                videoView.start()
+                exoPlayer.playWhenReady = true
                 playerState = PlayerState.PLAYING
             } else {
                 playerState = PlayerState.PLAY_WHEN_READY
@@ -191,55 +226,52 @@ class NativeVideoViewController(private val id: Int,
     }
 
     private fun pausePlayback() {
-        if (videoView.canPause()) {
-            videoView.pause()
-            playerState = PlayerState.PAUSED
-        }
+        exoPlayer.stop()
+        playerState = PlayerState.PAUSED
     }
 
     private fun stopPlayback() {
-        videoView.stopPlayback()
+        exoPlayer.stop(true)
         playerState = PlayerState.NOT_INITIALIZED
     }
 
     private fun destroyVideoView() {
-        videoView.stopPlayback()
-        videoView.setOnPreparedListener(null)
-        videoView.setOnErrorListener(null)
-        videoView.setOnCompletionListener(null)
+        exoPlayer.stop(true)
+        exoPlayer.removeListener(this)
+        exoPlayer.release()
         configured = false
     }
 
-    override fun onCompletion(mediaPlayer: MediaPlayer?) {
-        stopPlayback()
-        methodChannel.invokeMethod("player#onCompletion", null)
-    }
-
-    override fun onError(mediaPlayer: MediaPlayer?, what: Int, extra: Int): Boolean {
-        dataSource = null
-        playerState = PlayerState.NOT_INITIALIZED
+    private fun notifyPlayerPrepared() {
         val arguments = HashMap<String, Any>()
-        arguments["what"] = what
-        arguments["extra"] = extra
-        methodChannel.invokeMethod("player#onError", arguments)
-        return true
-    }
-
-    override fun onPrepared(mediaPlayer: MediaPlayer?) {
-        if (playerState == PlayerState.PLAY_WHEN_READY)
-            this.startPlayback()
-        else
-            notifyPlayerPrepared(mediaPlayer)
-    }
-
-    private fun notifyPlayerPrepared(mediaPlayer: MediaPlayer?) {
-        val arguments = HashMap<String, Any>()
-        if (mediaPlayer != null) {
-            arguments["height"] = mediaPlayer.videoHeight
-            arguments["width"] = mediaPlayer.videoWidth
-            arguments["duration"] = mediaPlayer.duration
+        val videoFormat = exoPlayer.videoFormat
+        if (videoFormat != null) {
+            arguments["height"] = videoFormat.height
+            arguments["width"] = videoFormat.width
+            arguments["duration"] = exoPlayer.duration
         }
         playerState = PlayerState.PREPARED
         methodChannel.invokeMethod("player#onPrepared", arguments)
+    }
+
+    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+        if (playbackState == Player.STATE_ENDED) {
+            stopPlayback()
+            methodChannel.invokeMethod("player#onCompletion", null)
+        } else if (playbackState == Player.STATE_READY) {
+            if (playerState == PlayerState.PLAY_WHEN_READY)
+                this.startPlayback()
+            else
+                notifyPlayerPrepared()
+        }
+    }
+
+    override fun onPlayerError(error: ExoPlaybackException) {
+        dataSource = null
+        playerState = PlayerState.NOT_INITIALIZED
+        val arguments = HashMap<String, Any>()
+        arguments["what"] = error.type
+        arguments["extra"] = error.message ?: ""
+        methodChannel.invokeMethod("player#onError", arguments)
     }
 }

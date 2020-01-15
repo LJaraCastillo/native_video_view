@@ -18,7 +18,7 @@ their plugin if you want a player for iOS only.
 First you need to add the dependency in your `pubspec.yaml`.
 
 ```yaml
-native_video_view: ^0.1.0
+native_video_view: ^0.1.8
 ```
 
 Then import the plugin in the .dart file you want to use it.
@@ -114,6 +114,9 @@ aspect ratio is 4/3.
 
 ***showMediaController***: Shows a default media controller overlay
 in the video player widget.
+
+***useExoPlayer***: Use ExoPlayer as the underlying player. 
+**Android Only**.
 
 ***autoHide***: Automatically hides the media controller after 
 a few seconds of no use. Default is `true`.
