@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+* Added an ExoPlayer controller for Android. This option can be 
+set when creating the widget.
+
 ## 0.1.4
 
 * Improved Android dispose mechanism.
