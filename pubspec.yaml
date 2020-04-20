@@ -1,6 +1,6 @@
 name: native_video_view
 description: A video player widget displayed using the platform native player (VideoView in Android and AVPlayer in iOS).
-version: 0.1.8
+version: 0.1.9
 homepage: https://github.com/LJaraCastillo/native_video_view
 
 environment:
@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  path_provider: ^1.4.2
+  path_provider: ^1.6.5
 
 dev_dependencies:
   flutter_test:
