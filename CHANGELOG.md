@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.9
+
+* Fixed swift kCMTimeZero crash. Changed kCMTimeZero to CMTime.zero. (Thanks to @ngocdtph03070) 
+* Updated path_provider dependency.
+
 ## 0.1.8
 
 * Added an ExoPlayer controller for Android. This option can be 
