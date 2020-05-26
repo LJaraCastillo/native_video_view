@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+* Added memory leak fix for iOS. Thanks to @mentalmap
+
 ## 0.1.9
 
 * Fixed swift kCMTimeZero crash. Changed kCMTimeZero to CMTime.zero. (Thanks to @ngocdtph03070) 
