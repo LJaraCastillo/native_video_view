@@ -19,10 +19,22 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         self.videoView = VideoView(frame: frame)
         self.methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
         super.init()
-        self.videoView?.addOnPreparedObserver(callback: self.onPrepared)
-        self.videoView?.addOnFailedObserver(callback: self.onFailed(message:))
-        self.videoView?.addOnCompletionObserver(callback: self.onCompletion)
-        self.methodChannel.setMethodCallHandler(handle)
+        self.videoView?.addOnPreparedObserver {
+            [weak self] () -> Void in
+            self?.onPrepared()
+        }
+        self.videoView?.addOnFailedObserver {
+            [weak self] (message: String) -> Void in
+            self?.onFailed(message: message)
+        }
+        self.videoView?.addOnCompletionObserver {
+            [weak self] () -> Void in
+            self?.onCompletion()
+        }
+        self.methodChannel.setMethodCallHandler {
+           [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+            self?.handle(call: call, result: result)
+        }
     }
     
     deinit {
