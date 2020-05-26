@@ -1,6 +1,6 @@
 name: native_video_view
 description: A video player widget displayed using the platform native player (VideoView in Android and AVPlayer in iOS).
-version: 0.1.9
+version: 0.2.1
 homepage: https://github.com/LJaraCastillo/native_video_view
 
 environment:
