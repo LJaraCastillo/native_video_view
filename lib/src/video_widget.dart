@@ -22,6 +22,10 @@ typedef PreparedCallback = void Function(
 /// Callback that indicates the progression of the media being played.
 typedef ProgressionCallback = void Function(int elapsedTime, int duration);
 
+/// Callback that indicates that the volume has been changed using the
+/// media controller.
+typedef VolumeChangedCallback = void Function(double volume);
+
 /// Widget that displays a video player.
 /// This widget calls an underlying player in the
 /// respective platform, [VideoView] in Android and
@@ -44,6 +48,21 @@ class NativeVideoView extends StatefulWidget {
 
   /// The time after which the controller will automatically hide.
   final Duration autoHideTime;
+
+  /// Enables the drag gesture over the video to control the volume.
+  final bool enableVolumeDragGesture;
+
+  /// Margin in both sides in which the drag gesture to control volume is not
+  /// responding. This margin is applied to both sides horizontally.
+  final double volumeDragMargin;
+
+  /// Direction of the volume drag gesture. In [TextDirection.ltr] The volume
+  /// is raised if the drag gesture is from left to right and is decreased
+  /// if goes in the contrary direction. The contrary happens if
+  /// [TextDirection.rtl] is chosen.
+  ///
+  /// Default value is [TextDirection.ltr].
+  final TextDirection volumeDragDirection;
 
   /// Instance of [ViewCreatedCallback] to notify
   /// when the view is finished creating.
@@ -73,6 +92,9 @@ class NativeVideoView extends StatefulWidget {
     this.useExoPlayer,
     this.autoHide,
     this.autoHideTime,
+    this.enableVolumeDragGesture,
+    this.volumeDragMargin,
+    this.volumeDragDirection,
     @required this.onCreated,
     @required this.onPrepared,
     @required this.onCompletion,
@@ -157,8 +179,10 @@ class _NativeVideoViewState extends State<NativeVideoView> {
             controller: _mediaController,
             autoHide: widget.autoHide,
             autoHideTime: widget.autoHideTime,
+            enableVolumeControl: widget.enableVolumeDragGesture,
             onControlPressed: _onControlPressed,
             onPositionChanged: _onPositionChanged,
+            onVolumeChanged: _onVolumeChanged,
           )
         : videoView;
   }
@@ -260,6 +284,9 @@ class _NativeVideoViewState extends State<NativeVideoView> {
             notifyPlayerPosition(newPosition, duration);
           }
           break;
+        case _MediaControl.toggle_sound:
+          controller.toggleSound();
+          break;
       }
     }
   }
@@ -270,5 +297,13 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   void _onPositionChanged(int position, int duration) async {
     VideoViewController controller = await _controller.future;
     if (controller != null) controller.seekTo(position);
+  }
+
+  /// When the position is changed in the media controller, the action is
+  /// realized by the [VideoViewController] to change the position of
+  /// the video playback.
+  void _onVolumeChanged(double volume) async {
+    VideoViewController controller = await _controller.future;
+    if (controller != null) controller.setVolume(volume);
   }
 }

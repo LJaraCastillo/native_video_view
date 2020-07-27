@@ -98,6 +98,10 @@ class VideoView : UIView {
     func isPlaying() -> Bool{
         return self.player?.rate != 0 && self.player?.error == nil
     }
+
+    func setVolume(volume:Double){
+        self.player?.volume = Float(volume)
+    }
     
     func getDuration()-> Int64 {
         let durationObj = self.player?.currentItem?.asset.duration
