@@ -79,13 +79,15 @@ class VideoViewController {
   Future<void> setVideoSource(
     String source, {
     VideoSourceType sourceType = VideoSourceType.file,
+    bool requestAudioFocus,
   }) async {
     assert(source != null);
+    requestAudioFocus = requestAudioFocus ?? false;
     if (sourceType == VideoSourceType.asset) {
       File file = await _getAssetFile(source);
-      await _setVideosSource(file.path, sourceType);
+      await _setVideosSource(file.path, sourceType, requestAudioFocus);
     } else {
-      await _setVideosSource(source, sourceType);
+      await _setVideosSource(source, sourceType, requestAudioFocus);
     }
   }
 
@@ -131,12 +133,13 @@ class VideoViewController {
   }
 
   /// Sets the video source from a file in the device memory.
-  Future<void> _setVideosSource(
-      String videoSource, VideoSourceType sourceType) async {
+  Future<void> _setVideosSource(String videoSource, VideoSourceType sourceType,
+      bool requestAudioFocus) async {
     assert(videoSource != null);
     Map<String, dynamic> args = {
       "videoSource": videoSource,
       "sourceType": sourceType.toString(),
+      "requestAudioFocus": requestAudioFocus,
     };
     try {
       await channel.invokeMethod<void>("player#setVideoSource", args);
@@ -215,6 +218,31 @@ class VideoViewController {
   Future<bool> isPlaying() async {
     final result = await channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
+  }
+
+  /// Changes the state of the volume between muted and not muted.
+  /// Returns true if the change was successful or false if an error happened.
+  Future<bool> toggleSound() async {
+    try {
+      await channel.invokeMethod("player#toggleSound");
+      _videoViewState.notifyControlChanged(_MediaControl.toggle_sound);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
+  }
+
+  /// Sets the volume of the player.
+  Future<bool> setVolume(double volume) async {
+    try {
+      Map<String, dynamic> args = {"volume": volume};
+      await channel.invokeMethod("player#setVolume", args);
+      return true;
+    } catch (ex) {
+      print(ex);
+    }
+    return false;
   }
 
   /// Starts the timer that monitor the time progression of the playback.

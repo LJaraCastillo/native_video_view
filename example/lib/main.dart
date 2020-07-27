@@ -29,6 +29,7 @@ class _MyAppState extends State<MyApp> {
           controller.setVideoSource(
             'assets/example.mp4',
             sourceType: VideoSourceType.asset,
+            requestAudioFocus: true,
           );
         },
         onPrepared: (controller, info) {
