@@ -178,8 +178,7 @@ class _MediaControls extends StatefulWidget {
   /// is touched.
   final ProgressionCallback onPositionChanged;
 
-  /// Progression callback used to notify when the progression slider
-  /// is touched.
+  /// Enables the control for the volume in the media control.
   final bool enableVolumeControl;
 
   /// Progression callback used to notify when the progression slider
@@ -273,10 +272,11 @@ class _MediaControlsState extends State<_MediaControls> {
           iconData: Icons.fast_forward,
           onPressed: _forward,
         ),
-        _buildControlButton(
-          iconData: Icons.volume_up,
-          onPressed: _toggleVolumeControl,
-        ),
+        if (_shouldBuildVolumeControl())
+          _buildControlButton(
+            iconData: Icons.volume_up,
+            onPressed: _toggleVolumeControl,
+          ),
       ],
     );
   }
@@ -443,13 +443,24 @@ class _MediaControlsState extends State<_MediaControls> {
     _notifyControlPressed(_MediaControl.toggle_sound);
   }
 
+  /// Notifies when a control button in pressed.
   void _notifyControlPressed(_MediaControl control) {
     if (widget.onControlPressed != null) widget.onControlPressed(control);
     _resetAutoHideTimer();
   }
 
+  /// Resets the auto-hide timer for this control.
   void _resetAutoHideTimer() {
     if (widget.onTapped != null) widget.onTapped();
+  }
+
+  /// Returns if the volume controls should be build based on the configuration
+  /// passed in the widget constructor. If is disabled or has no callback
+  /// the volume control will not be built.
+  bool _shouldBuildVolumeControl() {
+    bool enabled = widget.enableVolumeControl ?? false;
+    bool hasCallback = widget.onVolumeChanged != null;
+    return enabled && hasCallback;
   }
 }
 

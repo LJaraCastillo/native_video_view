@@ -50,19 +50,9 @@ class NativeVideoView extends StatefulWidget {
   final Duration autoHideTime;
 
   /// Enables the drag gesture over the video to control the volume.
-  final bool enableVolumeDragGesture;
-
-  /// Margin in both sides in which the drag gesture to control volume is not
-  /// responding. This margin is applied to both sides horizontally.
-  final double volumeDragMargin;
-
-  /// Direction of the volume drag gesture. In [TextDirection.ltr] The volume
-  /// is raised if the drag gesture is from left to right and is decreased
-  /// if goes in the contrary direction. The contrary happens if
-  /// [TextDirection.rtl] is chosen.
   ///
-  /// Default value is [TextDirection.ltr].
-  final TextDirection volumeDragDirection;
+  /// Default value is false.
+  final bool enableVolumeControl;
 
   /// Instance of [ViewCreatedCallback] to notify
   /// when the view is finished creating.
@@ -92,9 +82,7 @@ class NativeVideoView extends StatefulWidget {
     this.useExoPlayer,
     this.autoHide,
     this.autoHideTime,
-    this.enableVolumeDragGesture,
-    this.volumeDragMargin,
-    this.volumeDragDirection,
+    this.enableVolumeControl,
     @required this.onCreated,
     @required this.onPrepared,
     @required this.onCompletion,
@@ -179,7 +167,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
             controller: _mediaController,
             autoHide: widget.autoHide,
             autoHideTime: widget.autoHideTime,
-            enableVolumeControl: widget.enableVolumeDragGesture,
+            enableVolumeControl: widget.enableVolumeControl,
             onControlPressed: _onControlPressed,
             onPositionChanged: _onPositionChanged,
             onVolumeChanged: _onVolumeChanged,
