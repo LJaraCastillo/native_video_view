@@ -18,7 +18,7 @@ their plugin if you want a player for iOS only.
 First you need to add the dependency in your `pubspec.yaml`.
 
 ```yaml
-native_video_view: ^0.1.8
+native_video_view: ^0.3.0
 ```
 
 Then import the plugin in the .dart file you want to use it.
@@ -115,6 +115,9 @@ aspect ratio is 4/3.
 ***showMediaController***: Shows a default media controller overlay
 in the video player widget.
 
+***enableVolumeControl***: Adds an option in the MediaController to control the volume of the 
+playback.
+
 ***useExoPlayer***: Use ExoPlayer as the underlying player. 
 **Android Only**.
 
@@ -139,5 +142,23 @@ the end.
 playback. 
 
 
+### AudioFocus
 
+To make the player get the audio focus of the system you just have to use the setting 
+***requestAudioFocus*** when setting the video source. See the example below.
+
+```dart
+@override
+Widget build(BuildContext context) {
+    return NativeVideoView(
+       onCreated: (controller) {
+         controller.setVideoSource(
+             'assets/example.mp4',
+             requestAudioFocus: true,
+             sourceType: VideoSourceType.asset,
+         );
+       },
+    );
+}
+```
 

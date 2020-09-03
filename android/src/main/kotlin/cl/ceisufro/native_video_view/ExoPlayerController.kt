@@ -15,9 +15,11 @@ import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.RESUMED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STARTED
 import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STOPPED
+import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -46,8 +48,10 @@ class ExoPlayerController(private val id: Int,
     private val surfaceView: SurfaceView
     private val exoPlayer: SimpleExoPlayer
     private var dataSource: String? = null
+    private var requestAudioFocus: Boolean = true
+    private var volume: Double = 1.0
+    private var mute: Boolean = false
     private var disposed: Boolean = false
-    private var configured: Boolean = false
     private var playerState: PlayerState = PlayerState.NOT_INITIALIZED
 
     init {
@@ -103,6 +107,7 @@ class ExoPlayerController(private val id: Int,
             "player#setVideoSource" -> {
                 val videoPath: String? = call.argument("videoSource")
                 val sourceType: String? = call.argument("sourceType")
+                requestAudioFocus = call.argument("requestAudioFocus") as Boolean? ?: true
                 if (videoPath != null) {
                     if (sourceType.equals("VideoSourceType.asset")
                             || sourceType.equals("VideoSourceType.file")) {
@@ -139,6 +144,20 @@ class ExoPlayerController(private val id: Int,
                 val position: Int? = call.argument("position")
                 if (position != null)
                     exoPlayer.seekTo(position.toLong())
+                result.success(null)
+            }
+            "player#toggleSound" -> {
+                mute = !mute
+                configureVolume()
+                result.success(null)
+            }
+            "player#setVolume" -> {
+                val volume: Double? = call.argument("volume")
+                if (volume != null) {
+                    this.mute = false
+                    this.volume = volume
+                    configureVolume()
+                }
                 result.success(null)
             }
         }
@@ -179,14 +198,33 @@ class ExoPlayerController(private val id: Int,
         try {
             exoPlayer.addListener(this)
             exoPlayer.setVideoSurfaceView(surfaceView)
-            configured = true
+            handleAudioFocus()
         } catch (ex: Exception) {
             ex.printStackTrace()
         }
     }
 
+    private fun handleAudioFocus() {
+        exoPlayer.setAudioAttributes(getAudioAttributes(), requestAudioFocus)
+    }
+
+    private fun getAudioAttributes(): AudioAttributes {
+        return AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.CONTENT_TYPE_MOVIE)
+                .build()
+    }
+
+    private fun configureVolume() {
+        if (mute) {
+            exoPlayer.volume = 0f
+        } else {
+            exoPlayer.volume = volume.toFloat()
+        }
+    }
+
     private fun initVideo(dataSource: String?) {
-        if (!configured) this.configurePlayer()
+        this.configurePlayer()
         if (dataSource != null) {
             val uri = Uri.parse(dataSource)
             val dataSourceFactory = getDataSourceFactory(uri)
@@ -239,7 +277,6 @@ class ExoPlayerController(private val id: Int,
         exoPlayer.stop(true)
         exoPlayer.removeListener(this)
         exoPlayer.release()
-        configured = false
     }
 
     private fun notifyPlayerPrepared() {
@@ -259,10 +296,12 @@ class ExoPlayerController(private val id: Int,
             stopPlayback()
             methodChannel.invokeMethod("player#onCompletion", null)
         } else if (playbackState == Player.STATE_READY) {
-            if (playerState == PlayerState.PLAY_WHEN_READY)
+            configureVolume()
+            if (playerState == PlayerState.PLAY_WHEN_READY) {
                 this.startPlayback()
-            else
+            } else {
                 notifyPlayerPrepared()
+            }
         }
     }
 

@@ -7,4 +7,5 @@ enum _MediaControl {
   stop,
   fwd,
   rwd,
+  toggle_sound,
 }

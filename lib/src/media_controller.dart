@@ -16,6 +16,9 @@ class _MediaController extends StatefulWidget {
   /// The time after which the controller will automatically hide.
   final Duration autoHideTime;
 
+  /// Enables the control for the volume in the media control.
+  final bool enableVolumeControl;
+
   /// Controller to update the media controller view when the
   /// video controller is used to call a playback function.
   final _MediaControlsController controller;
@@ -27,15 +30,21 @@ class _MediaController extends StatefulWidget {
   /// is touched.
   final ProgressionCallback onPositionChanged;
 
+  /// Progression callback used to notify when the progression slider
+  /// is touched.
+  final VolumeChangedCallback onVolumeChanged;
+
   /// Constructor of the widget.
   const _MediaController({
     Key key,
     @required this.child,
     this.autoHide,
     this.autoHideTime,
+    this.enableVolumeControl,
     this.controller,
     this.onControlPressed,
     this.onPositionChanged,
+    this.onVolumeChanged,
   }) : super(key: key);
 
   @override
@@ -69,17 +78,23 @@ class _MediaControllerState extends State<_MediaController> {
         Stack(
           children: <Widget>[
             widget.child,
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _toggleController,
-                child: Container(),
-              ),
-            ),
+            _buildToggleWidget(),
           ],
         ),
         _buildMediaController(),
       ],
+    );
+  }
+
+  /// Builds the overlay widget that detects the tap gesture to toggle the
+  /// media controls.
+  Widget _buildToggleWidget() {
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggleController,
+        child: Container(),
+      ),
     );
   }
 
@@ -96,6 +111,8 @@ class _MediaControllerState extends State<_MediaController> {
           controller: widget.controller,
           onControlPressed: widget.onControlPressed,
           onPositionChanged: widget.onPositionChanged,
+          enableVolumeControl: widget.enableVolumeControl,
+          onVolumeChanged: widget.onVolumeChanged,
           onTapped: _onControllerTapped,
         ),
         offstage: !_visible,
@@ -122,17 +139,18 @@ class _MediaControllerState extends State<_MediaController> {
   void _resolveAutoHide() {
     bool autoHide = widget.autoHide ?? true;
     if (autoHide) {
-      if (_visible)
+      if (_visible) {
         _setAutoHideTimer();
-      else
+      } else {
         _cancelAutoHideTimer();
+      }
     }
   }
 
   /// Sets the auto hide timer.
   void _setAutoHideTimer() {
     _cancelAutoHideTimer();
-    int time = widget.autoHideTime?.inMilliseconds ?? 2000;
+    int time = widget.autoHideTime?.inMilliseconds ?? 3000;
     _autoHideTimer = Timer(Duration(milliseconds: time), () {
       _toggleController(visibility: false);
     });
@@ -160,6 +178,13 @@ class _MediaControls extends StatefulWidget {
   /// is touched.
   final ProgressionCallback onPositionChanged;
 
+  /// Enables the control for the volume in the media control.
+  final bool enableVolumeControl;
+
+  /// Progression callback used to notify when the progression slider
+  /// is touched.
+  final VolumeChangedCallback onVolumeChanged;
+
   /// Callback to notify when the widget is tapped.
   final Function onTapped;
 
@@ -169,6 +194,8 @@ class _MediaControls extends StatefulWidget {
     this.controller,
     this.onControlPressed,
     this.onPositionChanged,
+    this.enableVolumeControl,
+    this.onVolumeChanged,
     this.onTapped,
   }) : super(key: key);
 
@@ -182,8 +209,17 @@ class _MediaControlsState extends State<_MediaControls> {
   /// is displayed.
   bool _playing = false;
 
+  /// Determinate if the state of volume is muted.
+  bool _volumeControlVisible = false;
+
+  /// Determinate if the state of volume is muted.
+  bool _muted = false;
+
   /// Current progress of the slider.
   double _progress = 0;
+
+  /// Current progress of the slider.
+  double _volume = 1;
 
   /// Max duration of the slider.
   double _duration = 1000;
@@ -207,6 +243,7 @@ class _MediaControlsState extends State<_MediaControls> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+          if (_volumeControlVisible) _buildVolumeControl(),
           _buildControlButtons(),
           _buildProgressionBar(),
         ],
@@ -235,6 +272,11 @@ class _MediaControlsState extends State<_MediaControls> {
           iconData: Icons.fast_forward,
           onPressed: _forward,
         ),
+        if (_shouldBuildVolumeControl())
+          _buildControlButton(
+            iconData: Icons.volume_up,
+            onPressed: _toggleVolumeControl,
+          ),
       ],
     );
   }
@@ -259,6 +301,33 @@ class _MediaControlsState extends State<_MediaControls> {
     );
   }
 
+  /// Builds the volume control widget.
+  Widget _buildVolumeControl() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: MainAxisSize.max,
+      children: <Widget>[
+        _buildControlButton(
+          iconData:
+              !_muted && _volume != 0 ? Icons.volume_up : Icons.volume_off,
+          onPressed: _mute,
+        ),
+        Expanded(
+          child: Slider(
+            onChanged: _onVolumeChanged,
+            value: _volume,
+            min: 0,
+            max: 1,
+          ),
+        ),
+        _buildControlButton(
+          iconData: Icons.close,
+          onPressed: _toggleVolumeControl,
+        ),
+      ],
+    );
+  }
+
   /// Initializes the media controller if is not null.
   void _initMediaController() {
     if (widget.controller != null) {
@@ -278,6 +347,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// Callback that is called when the controller calls a function and the
   /// control view needs to be updated.
   void _onControlPressed(_MediaControl mediaControl) {
+    _resetAutoHideTimer();
     switch (mediaControl) {
       case _MediaControl.pause:
         setState(() {
@@ -292,6 +362,11 @@ class _MediaControlsState extends State<_MediaControls> {
       case _MediaControl.stop:
         setState(() {
           _playing = false;
+        });
+        break;
+      case _MediaControl.toggle_sound:
+        setState(() {
+          _muted = !_muted;
         });
         break;
       default:
@@ -315,7 +390,18 @@ class _MediaControlsState extends State<_MediaControls> {
     _onPositionChanged(position.toInt(), _duration.toInt());
     if (widget.onPositionChanged != null)
       widget.onPositionChanged(position.toInt(), _duration.toInt());
-    if (widget.onTapped != null) widget.onTapped();
+    _resetAutoHideTimer();
+  }
+
+  /// Notifies when the slider in the media controller has been touched
+  /// and the playback position needs to be updated through the video controller.
+  void _onVolumeChanged(double volume) {
+    setState(() {
+      _volume = volume;
+      _muted = false;
+    });
+    if (widget.onVolumeChanged != null) widget.onVolumeChanged(volume);
+    _resetAutoHideTimer();
   }
 
   /// Notifies when the rewind button in the media controller has been pressed
@@ -343,9 +429,38 @@ class _MediaControlsState extends State<_MediaControls> {
     _notifyControlPressed(_MediaControl.fwd);
   }
 
+  /// Notifies when the mute button in the media controller has been pressed
+  /// and the playback position needs to be updated through the video controller.
+  void _toggleVolumeControl() {
+    setState(() {
+      _volumeControlVisible = !_volumeControlVisible;
+    });
+  }
+
+  /// Notifies when the mute button in the media controller has been pressed
+  /// and the playback position needs to be updated through the video controller.
+  void _mute() {
+    _notifyControlPressed(_MediaControl.toggle_sound);
+  }
+
+  /// Notifies when a control button in pressed.
   void _notifyControlPressed(_MediaControl control) {
     if (widget.onControlPressed != null) widget.onControlPressed(control);
+    _resetAutoHideTimer();
+  }
+
+  /// Resets the auto-hide timer for this control.
+  void _resetAutoHideTimer() {
     if (widget.onTapped != null) widget.onTapped();
+  }
+
+  /// Returns if the volume controls should be build based on the configuration
+  /// passed in the widget constructor. If is disabled or has no callback
+  /// the volume control will not be built.
+  bool _shouldBuildVolumeControl() {
+    bool enabled = widget.enableVolumeControl ?? false;
+    bool hasCallback = widget.onVolumeChanged != null;
+    return enabled && hasCallback;
   }
 }
 
