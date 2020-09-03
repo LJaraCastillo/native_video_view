@@ -6,13 +6,13 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
-  - Flutter (from `.symlinks/flutter/ios`)
+  - Flutter (from `Flutter`)
   - native_video_view (from `.symlinks/plugins/native_video_view/ios`)
   - path_provider (from `.symlinks/plugins/path_provider/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
-    :path: ".symlinks/flutter/ios"
+    :path: Flutter
   native_video_view:
     :path: ".symlinks/plugins/native_video_view/ios"
   path_provider:
@@ -21,8 +21,8 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
   native_video_view: 02756aebe7ec9d0ab00d039b7aa3756548900bc3
-  path_provider: fb74bd0465e96b594bb3b5088ee4a4e7bb1f2a9d
+  path_provider: abfe2b5c733d04e238b0d8691db0cfd63a27a93c
 
-PODFILE CHECKSUM: b6a0a141693093b304368d08511b46cf3d1d0ac5
+PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
 
-COCOAPODS: 1.6.1
+COCOAPODS: 1.9.3

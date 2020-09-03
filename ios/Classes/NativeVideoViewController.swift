@@ -58,7 +58,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
                 let videoPath: String? = args["videoSource"] as? String
                 let sourceType: String? = args["sourceType"] as? String
                 let requestAudioFocus: Bool? = args["requestAudioFocus"] as? Bool
-                self.requestAudioFocus = requestAudioFocus != nil ? requestAudioFocus : false
+                self.requestAudioFocus = requestAudioFocus ?? false
                 if let path = videoPath {
                     let isUrl: Bool = sourceType == "VideoSourceType.network" ? true : false
                     self.configurePlayer()
@@ -103,11 +103,14 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             result(nil)
             break
         case "player#setVolume":
-            let volume: Double? = args["volume"] as? Double
-            if volume != nil {
-                this.mute = false
-                self.volume = volume
-                self.configureVolume()
+            let arguments = call.arguments as? [String:Any]
+            if let args = arguments {
+                let volume: Double? = args["volume"] as? Double
+                if let vol = volume {
+                    self.mute = false
+                    self.volume = vol
+                    self.configureVolume()
+                }
             }
             result(nil)
             break
@@ -125,9 +128,9 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
     func handleAudioFocus(){
         do {
             if requestAudioFocus {
-                try AVAudioSession.sharedInstance().setCategory(.ambient)
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryAmbient)
             } else {
-                try AVAudioSession.sharedInstance().setCategory(.playback)
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
             }
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
@@ -137,13 +140,14 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
 
     func configureVolume(){
         if mute {
-            self.videoView?.setVolume(0.0)
+            self.videoView?.setVolume(volume: 0.0)
         } else {
-            self.videoView?.setVolume(volume)
+            self.videoView?.setVolume(volume: volume)
         }
     }
     
     func onCompletion(){
+        self.videoView?.stop()
         self.methodChannel.invokeMethod("player#onCompletion", arguments: nil)
     }
     

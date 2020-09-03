@@ -25,6 +25,7 @@ class _MyAppState extends State<MyApp> {
       child: NativeVideoView(
         keepAspectRatio: true,
         showMediaController: true,
+	      enableVolumeControl: true,
         onCreated: (controller) {
           controller.setVideoSource(
             'assets/example.mp4',
