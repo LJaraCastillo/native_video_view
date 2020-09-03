@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+* Added audio focus functionality and settings in controller. (#7)
+* Added volume control functionality in platform code and in MediaController. (#9 partial, looping is in progress.)
+* Updated ***path_provider*** dependency to ***1.6.14***.
+
 ## 0.2.1
 
 * Added memory leak fix for iOS. Thanks to @mentalmap
