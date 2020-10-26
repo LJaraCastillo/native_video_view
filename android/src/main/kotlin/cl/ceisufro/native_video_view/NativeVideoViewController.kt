@@ -3,6 +3,7 @@ package cl.ceisufro.native_video_view
 import android.app.Activity
 import android.app.Application
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -191,7 +192,8 @@ class NativeVideoViewController(private val id: Int,
     private fun initVideo(dataSource: String?) {
         this.configurePlayer()
         if (dataSource != null) {
-            this.videoView?.setVideoPath(dataSource)
+            val videoUri = Uri.parse(dataSource);
+            this.videoView?.setVideoURI(videoUri)
             this.dataSource = dataSource
         }
     }
