@@ -19,30 +19,30 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
 
     init(frame: CGRect, viewId: Int64, registrar: FlutterPluginRegistrar) {
         self.viewId = viewId
-        self.videoView = VideoView(frame: frame)
-        self.methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
+        videoView = VideoView(frame: frame)
+        methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
         super.init()
-        self.videoView?.addOnPreparedObserver {
+        videoView?.addOnPreparedObserver {
             [weak self] () -> Void in
             self?.onPrepared()
         }
-        self.videoView?.addOnFailedObserver {
+        videoView?.addOnFailedObserver {
             [weak self] (message: String) -> Void in
             self?.onFailed(message: message)
         }
-        self.videoView?.addOnCompletionObserver {
+        videoView?.addOnCompletionObserver {
             [weak self] () -> Void in
             self?.onCompletion()
         }
-        self.methodChannel.setMethodCallHandler {
+        methodChannel.setMethodCallHandler {
             [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             self?.handle(call: call, result: result)
         }
     }
 
     deinit {
-        self.videoView = nil
-        self.methodChannel.setMethodCallHandler(nil)
+        videoView = nil
+        methodChannel.setMethodCallHandler(nil)
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -55,61 +55,59 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         case "player#setVideoSource":
             let arguments = call.arguments as? [String: Any]
             if let args = arguments {
+                self.requestAudioFocus = args["requestAudioFocus"] as? Bool ?? false
                 let videoPath: String? = args["videoSource"] as? String
-                let sourceType: String? = args["sourceType"] as? String
-                let requestAudioFocus: Bool? = args["requestAudioFocus"] as? Bool
-                self.requestAudioFocus = requestAudioFocus ?? false
                 if let path = videoPath {
-                    let isUrl: Bool = sourceType == "VideoSourceType.network" ? true : false
-                    self.configurePlayer()
-                    self.videoView?.configure(videoPath: path, isURL: isUrl)
+                    let sourceType: String? = args["sourceType"] as? String
+                    let isUrl = sourceType == "VideoSourceType.network"
+                    configurePlayer()
+                    videoView?.configure(videoPath: path, isURL: isUrl)
                 }
             }
             result(nil)
             break
         case "player#start":
-            self.videoView?.play()
+            videoView?.play()
             result(nil)
             break
         case "player#pause":
-            self.videoView?.pause(restart: false)
+            videoView?.pause(restart: false)
             result(nil)
             break
         case "player#stop":
-            self.videoView?.stop()
+            videoView?.stop()
             result(nil)
             break
         case "player#currentPosition":
             var arguments = Dictionary<String, Any>()
-            arguments["currentPosition"] = self.videoView?.getCurrentPosition()
+            arguments["currentPosition"] = videoView?.getCurrentPosition()
             result(arguments)
             break
         case "player#isPlaying":
             var arguments = Dictionary<String, Any>()
-            arguments["isPlaying"] = self.videoView?.isPlaying()
+            arguments["isPlaying"] = videoView?.isPlaying()
             result(arguments)
             break
         case "player#seekTo":
             let arguments = call.arguments as? [String: Any]
             if let args = arguments {
                 let position: Int64? = args["position"] as? Int64
-                self.videoView?.seekTo(positionInMillis: position)
+                videoView?.seekTo(positionInMillis: position)
             }
             result(nil)
             break
         case "player#toggleSound":
             mute = !mute
-            self.configureVolume()
+            configureVolume()
             result(nil)
             break
         case "player#setVolume":
             let arguments = call.arguments as? [String: Any]
             if let args = arguments {
-                let volume: Double? = args["volume"] as? Double
-                if let vol = volume {
-                    self.mute = false
-                    self.volume = vol
-                    self.configureVolume()
+                if let volume = args["volume"] as? Double {
+                    mute = false
+                    self.volume = volume
+                    configureVolume()
                 }
             }
             result(nil)
@@ -121,13 +119,14 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
     }
 
     func configurePlayer() {
-        self.handleAudioFocus()
-        self.configureVolume()
+        handleAudioFocus()
+        configureVolume()
     }
 
     func handleAudioFocus() {
         do {
             if requestAudioFocus {
+//                try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.ambient, mode: AVAudioSession.Mode.default, options: AVAudioSession.CategoryOptions.mixWithOthers)
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.ambient)
             } else {
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback)
@@ -140,30 +139,30 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
 
     func configureVolume() {
         if mute {
-            self.videoView?.setVolume(volume: 0.0)
+            videoView?.setVolume(volume: 0.0)
         } else {
-            self.videoView?.setVolume(volume: volume)
+            videoView?.setVolume(volume: volume)
         }
     }
 
     func onCompletion() {
-        self.videoView?.stop()
-        self.methodChannel.invokeMethod("player#onCompletion", arguments: nil)
+        videoView?.stop()
+        methodChannel.invokeMethod("player#onCompletion", arguments: nil)
     }
 
     func onPrepared() {
         var arguments = Dictionary<String, Any>()
-        let height = self.videoView?.getVideoHeight()
-        let width = self.videoView?.getVideoWidth()
-        arguments["duration"] = self.videoView?.getDuration()
+        let height = videoView?.getVideoHeight()
+        let width = videoView?.getVideoWidth()
+        arguments["duration"] = videoView?.getDuration()
         arguments["height"] = height
         arguments["width"] = width
-        self.methodChannel.invokeMethod("player#onPrepared", arguments: arguments)
+        methodChannel.invokeMethod("player#onPrepared", arguments: arguments)
     }
 
     func onFailed(message: String) {
         var arguments = Dictionary<String, Any>()
         arguments["message"] = message
-        self.methodChannel.invokeMethod("player#onError", arguments: arguments)
+        methodChannel.invokeMethod("player#onError", arguments: arguments)
     }
 }
