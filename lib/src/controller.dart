@@ -259,7 +259,7 @@ class VideoViewController {
   /// state.
   void _onProgressChanged(Timer? timer) async {
     int position = await currentPosition();
-    int duration = this.videoFile?.info?.duration ?? 1000;
+    int duration = this.videoFile?.info?.duration ?? 0;
     _videoViewState.onProgress(position, duration);
   }
 }

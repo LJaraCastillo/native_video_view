@@ -128,12 +128,13 @@ class _NativeVideoViewState extends State<NativeVideoView> {
     };
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _buildVideoView(
-          child: AndroidView(
-        viewType: 'native_video_view',
-        onPlatformViewCreated: onPlatformViewCreated,
-        creationParams: creationParams,
-        creationParamsCodec: const StandardMessageCodec(),
-      ));
+        child: AndroidView(
+          viewType: 'native_video_view',
+          onPlatformViewCreated: onPlatformViewCreated,
+          creationParams: creationParams,
+          creationParamsCodec: const StandardMessageCodec(),
+        ),
+      );
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       return _buildVideoView(
         child: UiKitView(

@@ -12,7 +12,6 @@ class VideoView: UIView {
     private var playerLayer: AVPlayerLayer?
     private var player: AVPlayer?
     private var videoAsset: AVAsset?
-    private var initialized: Bool = false
     private var onPrepared: (() -> Void)? = nil
     private var onFailed: ((String) -> Void)? = nil
     private var onCompletion: (() -> Void)? = nil
@@ -24,9 +23,17 @@ class VideoView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+
         backgroundColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
-        initVideoPlayer()
-        configureVideoLayer()
+
+        player = AVPlayer(playerItem: nil)
+        player?.addObserver(self, forKeyPath: "status", options: [], context: nil)
+
+        playerLayer = AVPlayerLayer(player: player)
+        playerLayer?.videoGravity = .resize
+        if let playerLayer = playerLayer {
+            layer.addSublayer(playerLayer)
+        }
     }
 
     deinit {
@@ -35,8 +42,16 @@ class VideoView: UIView {
         removeOnCompletionObserver()
         player?.removeObserver(self, forKeyPath: "status")
         NotificationCenter.default.removeObserver(self)
+
         stop()
-        initialized = false
+
+//        playerLayer?.removeFromSuperlayer()
+//        playerLayer = nil
+
+//        player?.replaceCurrentItem(with: nil)
+//        player = nil
+
+//        videoAsset = nil
     }
 
     override func layoutSubviews() {
@@ -45,27 +60,18 @@ class VideoView: UIView {
         playerLayer?.removeAllAnimations()
     }
 
-    private func initVideoPlayer() {
-        player = AVPlayer(playerItem: nil)
-        player?.addObserver(self, forKeyPath: "status", options: [], context: nil)
-        initialized = true
-    }
-
-    private func configureVideoLayer() {
-        playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.videoGravity = .resize
-        if let playerLayer = playerLayer {
-            layer.addSublayer(playerLayer)
-        }
-    }
-
     func configure(videoPath: String?, isURL: Bool) {
         if let path = videoPath,
            let uri: URL = isURL ? URL(string: path) : URL(fileURLWithPath: path) {
             videoAsset = AVAsset(url: uri)
             player?.replaceCurrentItem(with: AVPlayerItem(asset: videoAsset!))
             // Notifies when the video finishes playing.
-            NotificationCenter.default.addObserver(self, selector: #selector(onVideoCompleted(notification:)), name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(onVideoCompleted(notification:)),
+                name: .AVPlayerItemDidPlayToEndTime,
+                object: player?.currentItem
+            )
         }
     }
 
@@ -191,9 +197,14 @@ class VideoView: UIView {
         notifyOnCompletionObserver()
     }
 
-    override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
-        if keyPath == "status" {
-            let status = player!.status
+    override public func observeValue(
+        forKeyPath keyPath: String?,
+        of object: Any?,
+        change: [NSKeyValueChangeKey: Any]?,
+        context: UnsafeMutableRawPointer?
+    ) {
+        if keyPath == "status",
+           let status = player?.status {
             switch (status) {
             case .unknown:
                 print("Status unknown")
