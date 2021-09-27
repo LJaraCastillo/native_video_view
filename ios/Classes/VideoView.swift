@@ -87,7 +87,7 @@ class VideoView : UIView {
     func pause(restart:Bool){
         self.player?.pause()
         if(restart){
-            self.player?.seek(to: kCMTimeZero)
+            self.player?.seek(to: CMTime.zero)
         }
     }
     
@@ -150,7 +150,7 @@ class VideoView : UIView {
     
     func seekTo(positionInMillis: Int64?){
         if let pos = positionInMillis {
-            self.player?.seek(to: CMTimeMake(pos, 1000), toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
+            self.player?.seek(to: CMTimeMake(value: pos, timescale: 1000), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
         }
     }
     
