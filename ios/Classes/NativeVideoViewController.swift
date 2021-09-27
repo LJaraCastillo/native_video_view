@@ -17,7 +17,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
     private var mute: Bool = false
     private var volume: Double = 1.0
 
-    init(frame:CGRect, viewId:Int64, registrar: FlutterPluginRegistrar) {
+    init(frame: CGRect, viewId: Int64, registrar: FlutterPluginRegistrar) {
         self.viewId = viewId
         self.videoView = VideoView(frame: frame)
         self.methodChannel = FlutterMethodChannel(name: "native_video_view_\(viewId)", binaryMessenger: registrar.messenger())
@@ -35,25 +35,25 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             self?.onCompletion()
         }
         self.methodChannel.setMethodCallHandler {
-           [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+            [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             self?.handle(call: call, result: result)
         }
     }
-    
+
     deinit {
         self.videoView = nil
         self.methodChannel.setMethodCallHandler(nil)
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     public func view() -> UIView {
         return videoView!
     }
-    
+
     func handle(call: FlutterMethodCall, result: FlutterResult) -> Void {
-        switch(call.method){
+        switch (call.method) {
         case "player#setVideoSource":
-            let arguments = call.arguments as? [String:Any]
+            let arguments = call.arguments as? [String: Any]
             if let args = arguments {
                 let videoPath: String? = args["videoSource"] as? String
                 let sourceType: String? = args["sourceType"] as? String
@@ -90,7 +90,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             result(arguments)
             break
         case "player#seekTo":
-            let arguments = call.arguments as? [String:Any]
+            let arguments = call.arguments as? [String: Any]
             if let args = arguments {
                 let position: Int64? = args["position"] as? Int64
                 self.videoView?.seekTo(positionInMillis: position)
@@ -103,7 +103,7 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
             result(nil)
             break
         case "player#setVolume":
-            let arguments = call.arguments as? [String:Any]
+            let arguments = call.arguments as? [String: Any]
             if let args = arguments {
                 let volume: Double? = args["volume"] as? Double
                 if let vol = volume {
@@ -120,12 +120,12 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         }
     }
 
-    func configurePlayer(){
+    func configurePlayer() {
         self.handleAudioFocus()
         self.configureVolume()
     }
 
-    func handleAudioFocus(){
+    func handleAudioFocus() {
         do {
             if requestAudioFocus {
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.ambient)
@@ -138,20 +138,20 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         }
     }
 
-    func configureVolume(){
+    func configureVolume() {
         if mute {
             self.videoView?.setVolume(volume: 0.0)
         } else {
             self.videoView?.setVolume(volume: volume)
         }
     }
-    
-    func onCompletion(){
+
+    func onCompletion() {
         self.videoView?.stop()
         self.methodChannel.invokeMethod("player#onCompletion", arguments: nil)
     }
-    
-    func onPrepared(){
+
+    func onPrepared() {
         var arguments = Dictionary<String, Any>()
         let height = self.videoView?.getVideoHeight()
         let width = self.videoView?.getVideoWidth()
@@ -160,8 +160,8 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
         arguments["width"] = width
         self.methodChannel.invokeMethod("player#onPrepared", arguments: arguments)
     }
-    
-    func onFailed(message: String){
+
+    func onFailed(message: String) {
         var arguments = Dictionary<String, Any>()
         arguments["message"] = message
         self.methodChannel.invokeMethod("player#onError", arguments: arguments)

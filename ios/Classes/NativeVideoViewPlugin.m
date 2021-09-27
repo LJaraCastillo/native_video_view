@@ -3,6 +3,6 @@
 
 @implementation NativeVideoViewPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  [SwiftNativeVideoViewPlugin registerWithRegistrar:registrar];
+    [SwiftNativeVideoViewPlugin registerWithRegistrar:registrar];
 }
 @end
