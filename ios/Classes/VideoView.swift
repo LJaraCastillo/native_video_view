@@ -24,7 +24,7 @@ class VideoView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        backgroundColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
+        backgroundColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
 
         player = AVPlayer(playerItem: nil)
         player?.addObserver(self, forKeyPath: "status", options: [], context: nil)
