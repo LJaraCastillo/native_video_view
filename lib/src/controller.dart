@@ -12,21 +12,21 @@ class VideoViewController {
   /// Current video file loaded in the player.
   /// The [info] attribute is loaded when the player reaches
   /// the prepared state.
-  VideoFile _videoFile;
+  VideoFile? _videoFile;
 
   /// Returns the video file loaded in the player.
   /// The [info] attribute is loaded when the player reaches
   /// the prepared state.
-  VideoFile get videoFile => _videoFile;
+  VideoFile? get videoFile => _videoFile;
 
   /// Timer to control the progression of the video being played.
-  Timer _progressionController;
+  Timer? _progressionController;
 
   /// Constructor of the class.
   VideoViewController._(
     this.channel,
     this._videoViewState,
-  ) : assert(channel != null) {
+  ) {
     channel.setMethodCallHandler(_handleMethodCall);
   }
 
@@ -35,7 +35,6 @@ class VideoViewController {
     int id,
     _NativeVideoViewState videoViewState,
   ) async {
-    assert(id != null);
     final MethodChannel channel = MethodChannel('native_video_view_$id');
     return VideoViewController._(
       channel,
@@ -61,13 +60,12 @@ class VideoViewController {
         _videoFile = null;
         int what = call.arguments['what'] ?? -1;
         int extra = call.arguments['extra'] ?? -1;
-        String message = call.arguments['message'];
+        String? message = call.arguments['message'];
         _videoViewState.onError(this, what, extra, message);
         break;
       case 'player#onPrepared':
         VideoInfo videoInfo = VideoInfo._fromJson(call.arguments);
-        _videoFile =
-            _videoFile._copyWith(changes: VideoFile._(info: videoInfo));
+        _videoFile = _videoFile?._copyWith(changes: VideoFile._(info: videoInfo));
         _videoViewState.onPrepared(this, videoInfo);
         break;
     }
@@ -79,9 +77,8 @@ class VideoViewController {
   Future<void> setVideoSource(
     String source, {
     VideoSourceType sourceType = VideoSourceType.file,
-    bool requestAudioFocus,
+    bool? requestAudioFocus,
   }) async {
-    assert(source != null);
     requestAudioFocus = requestAudioFocus ?? false;
     if (sourceType == VideoSourceType.asset) {
       File file = await _getAssetFile(source);
@@ -97,8 +94,7 @@ class VideoViewController {
   Future<File> _getAssetFile(String asset) async {
     var tempFile = await _createTempFile();
     ByteData data = await rootBundle.load(asset);
-    List<int> bytes =
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     return tempFile.writeAsBytes(bytes);
   }
 
@@ -133,9 +129,7 @@ class VideoViewController {
   }
 
   /// Sets the video source from a file in the device memory.
-  Future<void> _setVideosSource(String videoSource, VideoSourceType sourceType,
-      bool requestAudioFocus) async {
-    assert(videoSource != null);
+  Future<void> _setVideosSource(String videoSource, VideoSourceType sourceType, bool requestAudioFocus) async {
     Map<String, dynamic> args = {
       "videoSource": videoSource,
       "sourceType": sourceType.toString(),
@@ -202,7 +196,6 @@ class VideoViewController {
   /// the [position] is bigger than the duration of source the duration
   /// of the video is used as position.
   Future<bool> seekTo(int position) async {
-    assert(position != null);
     try {
       Map<String, dynamic> args = {"position": position};
       await channel.invokeMethod<void>("player#seekTo", args);
@@ -215,7 +208,7 @@ class VideoViewController {
 
   /// Gets the state of the player.
   /// Returns true if the player is playing or false if is stopped or paused.
-  Future<bool> isPlaying() async {
+  Future<bool?> isPlaying() async {
     final result = await channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
   }
@@ -248,8 +241,7 @@ class VideoViewController {
   /// Starts the timer that monitor the time progression of the playback.
   void _startProgressTimer() {
     if (_progressionController == null) {
-      _progressionController =
-          Timer.periodic(Duration(milliseconds: 100), _onProgressChanged);
+      _progressionController = Timer.periodic(Duration(milliseconds: 100), _onProgressChanged);
     }
   }
 
@@ -257,7 +249,7 @@ class VideoViewController {
   /// time is restarted.
   void _stopProgressTimer() {
     if (_progressionController != null) {
-      _progressionController.cancel();
+      _progressionController!.cancel();
       _progressionController = null;
     }
   }
@@ -265,7 +257,7 @@ class VideoViewController {
   /// Callback called by the timer when an event is called.
   /// Updates the elapsed time counter and notifies the widget
   /// state.
-  void _onProgressChanged(Timer timer) async {
+  void _onProgressChanged(Timer? timer) async {
     int position = await currentPosition();
     int duration = this.videoFile?.info?.duration ?? 1000;
     _videoViewState.onProgress(position, duration);

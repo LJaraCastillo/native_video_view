@@ -11,33 +11,33 @@ class _MediaController extends StatefulWidget {
   final Widget child;
 
   /// Determines if the controller should hide automatically.
-  final bool autoHide;
+  final bool? autoHide;
 
   /// The time after which the controller will automatically hide.
-  final Duration autoHideTime;
+  final Duration? autoHideTime;
 
   /// Enables the control for the volume in the media control.
-  final bool enableVolumeControl;
+  final bool? enableVolumeControl;
 
   /// Controller to update the media controller view when the
   /// video controller is used to call a playback function.
-  final _MediaControlsController controller;
+  final _MediaControlsController? controller;
 
   /// Callback to notify when a button is pressed in the controller view.
-  final _ControlPressedCallback onControlPressed;
+  final _ControlPressedCallback? onControlPressed;
 
   /// Progression callback used to notify when the progression slider
   /// is touched.
-  final ProgressionCallback onPositionChanged;
+  final ProgressionCallback? onPositionChanged;
 
   /// Progression callback used to notify when the progression slider
   /// is touched.
-  final VolumeChangedCallback onVolumeChanged;
+  final VolumeChangedCallback? onVolumeChanged;
 
   /// Constructor of the widget.
   const _MediaController({
-    Key key,
-    @required this.child,
+    Key? key,
+    required this.child,
     this.autoHide,
     this.autoHideTime,
     this.enableVolumeControl,
@@ -57,7 +57,7 @@ class _MediaControllerState extends State<_MediaController> {
   bool _visible = true;
 
   /// Timer to auto hide the controller after a few seconds.
-  Timer _autoHideTimer;
+  Timer? _autoHideTimer;
 
   @override
   void initState() {
@@ -128,7 +128,7 @@ class _MediaControllerState extends State<_MediaController> {
   /// Changes the state of the visibility of the controls and rebuilds
   /// the widget. If [visibility] is set then is used as a new value of
   /// visibility.
-  void _toggleController({bool visibility}) {
+  void _toggleController({bool? visibility}) {
     setState(() {
       _visible = visibility ?? !_visible;
     });
@@ -159,7 +159,7 @@ class _MediaControllerState extends State<_MediaController> {
   /// Cancels the auto hide timer.
   void _cancelAutoHideTimer() {
     if (_autoHideTimer != null) {
-      _autoHideTimer.cancel();
+      _autoHideTimer!.cancel();
       _autoHideTimer = null;
     }
   }
@@ -169,28 +169,28 @@ class _MediaControllerState extends State<_MediaController> {
 class _MediaControls extends StatefulWidget {
   /// Controller to update the media controller view when the
   /// video controller is used to call a playback function.
-  final _MediaControlsController controller;
+  final _MediaControlsController? controller;
 
   /// Callback to notify when a button is pressed in the controller view.
-  final _ControlPressedCallback onControlPressed;
+  final _ControlPressedCallback? onControlPressed;
 
   /// Progression callback used to notify when the progression slider
   /// is touched.
-  final ProgressionCallback onPositionChanged;
+  final ProgressionCallback? onPositionChanged;
 
   /// Enables the control for the volume in the media control.
-  final bool enableVolumeControl;
+  final bool? enableVolumeControl;
 
   /// Progression callback used to notify when the progression slider
   /// is touched.
-  final VolumeChangedCallback onVolumeChanged;
+  final VolumeChangedCallback? onVolumeChanged;
 
   /// Callback to notify when the widget is tapped.
-  final Function onTapped;
+  final Function? onTapped;
 
   /// Constructor of the widget.
   const _MediaControls({
-    Key key,
+    Key? key,
     this.controller,
     this.onControlPressed,
     this.onPositionChanged,
@@ -293,8 +293,7 @@ class _MediaControlsState extends State<_MediaControls> {
 
   /// Builds a single control button. Requires the [iconData] to display
   /// the icon and a [onPressed] function to call when the button is pressed.
-  Widget _buildControlButton(
-      {@required IconData iconData, @required Function onPressed}) {
+  Widget _buildControlButton({required IconData iconData, required void Function() onPressed}) {
     return IconButton(
       icon: Icon(iconData, color: Colors.white),
       onPressed: onPressed,
@@ -308,8 +307,7 @@ class _MediaControlsState extends State<_MediaControls> {
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
         _buildControlButton(
-          iconData:
-              !_muted && _volume != 0 ? Icons.volume_up : Icons.volume_off,
+          iconData: !_muted && _volume != 0 ? Icons.volume_up : Icons.volume_off,
           onPressed: _mute,
         ),
         Expanded(
@@ -331,16 +329,16 @@ class _MediaControlsState extends State<_MediaControls> {
   /// Initializes the media controller if is not null.
   void _initMediaController() {
     if (widget.controller != null) {
-      widget.controller.addControlPressedListener(_onControlPressed);
-      widget.controller.addPositionChangedListener(_onPositionChanged);
+      widget.controller!.addControlPressedListener(_onControlPressed);
+      widget.controller!.addPositionChangedListener(_onPositionChanged);
     }
   }
 
   /// Clear callbacks in the media controller when this view is disposed.
   void _disposeMediaController() {
     if (widget.controller != null) {
-      widget.controller.clearControlPressedListener();
-      widget.controller.clearPositionChangedListener();
+      widget.controller!.clearControlPressedListener();
+      widget.controller!.clearPositionChangedListener();
     }
   }
 
@@ -378,8 +376,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// time has changed and the control view needs to be updated.
   void _onPositionChanged(int position, int duration) {
     setState(() {
-      _progress =
-          position > 0 && position <= duration ? position.toDouble() : 0;
+      _progress = position > 0 && position <= duration ? position.toDouble() : 0;
       _duration = duration > 0 ? duration.toDouble() : 0;
     });
   }
@@ -388,8 +385,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// and the playback position needs to be updated through the video controller.
   void _onSliderPositionChanged(double position) {
     _onPositionChanged(position.toInt(), _duration.toInt());
-    if (widget.onPositionChanged != null)
-      widget.onPositionChanged(position.toInt(), _duration.toInt());
+    if (widget.onPositionChanged != null) widget.onPositionChanged!(position.toInt(), _duration.toInt());
     _resetAutoHideTimer();
   }
 
@@ -400,7 +396,7 @@ class _MediaControlsState extends State<_MediaControls> {
       _volume = volume;
       _muted = false;
     });
-    if (widget.onVolumeChanged != null) widget.onVolumeChanged(volume);
+    if (widget.onVolumeChanged != null) widget.onVolumeChanged!(volume);
     _resetAutoHideTimer();
   }
 
@@ -445,13 +441,13 @@ class _MediaControlsState extends State<_MediaControls> {
 
   /// Notifies when a control button in pressed.
   void _notifyControlPressed(_MediaControl control) {
-    if (widget.onControlPressed != null) widget.onControlPressed(control);
+    if (widget.onControlPressed != null) widget.onControlPressed!(control);
     _resetAutoHideTimer();
   }
 
   /// Resets the auto-hide timer for this control.
   void _resetAutoHideTimer() {
-    if (widget.onTapped != null) widget.onTapped();
+    if (widget.onTapped != null) widget.onTapped!();
   }
 
   /// Returns if the volume controls should be build based on the configuration
@@ -470,16 +466,15 @@ class _MediaControlsState extends State<_MediaControls> {
 class _MediaControlsController {
   /// Control callback that is registered and is used to notify
   /// the video controller updates.
-  _ControlPressedCallback _controlPressedCallback;
+  _ControlPressedCallback? _controlPressedCallback;
 
   /// Position callback that is registered and is used to notify
   /// the video controller updates.
-  ProgressionCallback _positionChangedCallback;
+  ProgressionCallback? _positionChangedCallback;
 
   /// Adds callback that receive notifications when the video controller
   /// updates the state.
-  void addControlPressedListener(
-      _ControlPressedCallback controlPressedCallback) {
+  void addControlPressedListener(_ControlPressedCallback controlPressedCallback) {
     _controlPressedCallback = controlPressedCallback;
   }
 
@@ -490,7 +485,7 @@ class _MediaControlsController {
 
   /// Notifies when the video controller changes the state.
   void notifyControlPressed(_MediaControl mediaControl) {
-    if (_controlPressedCallback != null) _controlPressedCallback(mediaControl);
+    if (_controlPressedCallback != null) _controlPressedCallback!(mediaControl);
   }
 
   /// Adds callback that receive notifications when the video controller
@@ -506,7 +501,6 @@ class _MediaControlsController {
 
   /// Notifies when the video controller changes the playback position.
   void notifyPositionChanged(int position, int duration) {
-    if (_positionChangedCallback != null)
-      _positionChangedCallback(position, duration);
+    if (_positionChangedCallback != null) _positionChangedCallback!(position, duration);
   }
 }
