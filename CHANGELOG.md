@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0
+
+* Updated ***path_provider*** dependency to ***2.0.8***.
+* Updated to Flutter Embedding 2.
+* Updated to null safety. Thanks to @albemala.
+* Fixes for player state and media controls.
+
 ## 0.3.0
 
 * Added audio focus functionality and settings in controller. (#7)

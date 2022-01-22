@@ -27,7 +27,7 @@ class _MyAppState extends State<MyApp> {
       child: NativeVideoView(
         keepAspectRatio: true,
         showMediaController: true,
-	      enableVolumeControl: true,
+        enableVolumeControl: true,
         onCreated: (controller) {
           controller.setVideoSource(
             'assets/example.mp4',
@@ -40,7 +40,8 @@ class _MyAppState extends State<MyApp> {
           controller.play();
         },
         onError: (controller, what, extra, message) {
-          debugPrint('NativeVideoView: Player Error ($what | $extra | $message)');
+          debugPrint(
+              'NativeVideoView: Player Error ($what | $extra | $message)');
         },
         onCompletion: (controller) {
           debugPrint('NativeVideoView: Video completed');

@@ -260,7 +260,7 @@ class VideoViewController {
   /// Updates the elapsed time counter and notifies the widget
   /// state.
   Future _onProgressChanged(Timer? timer) async {
-    if((_progressionController?.isActive ?? false)) {
+    if ((_progressionController?.isActive ?? false)) {
       int position = await currentPosition();
       int duration = videoFile?.info?.duration ?? 1000;
       _videoViewState.onProgress(position, duration);
@@ -269,7 +269,7 @@ class VideoViewController {
 
   /// Resets the progress bar to the start.
   void _resetProgressPosition() {
-      int duration = videoFile?.info?.duration ?? 1000;
-      _videoViewState.onProgress(0, duration);
+    int duration = videoFile?.info?.duration ?? 1000;
+    _videoViewState.onProgress(0, duration);
   }
 }

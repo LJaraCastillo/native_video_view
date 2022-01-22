@@ -293,7 +293,8 @@ class _MediaControlsState extends State<_MediaControls> {
 
   /// Builds a single control button. Requires the [iconData] to display
   /// the icon and a [onPressed] function to call when the button is pressed.
-  Widget _buildControlButton({required IconData iconData, required void Function() onPressed}) {
+  Widget _buildControlButton(
+      {required IconData iconData, required void Function() onPressed}) {
     return IconButton(
       icon: Icon(iconData, color: Colors.white),
       onPressed: onPressed,
@@ -307,7 +308,8 @@ class _MediaControlsState extends State<_MediaControls> {
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
         _buildControlButton(
-          iconData: !_muted && _volume != 0 ? Icons.volume_up : Icons.volume_off,
+          iconData:
+              !_muted && _volume != 0 ? Icons.volume_up : Icons.volume_off,
           onPressed: _mute,
         ),
         Expanded(
@@ -376,7 +378,8 @@ class _MediaControlsState extends State<_MediaControls> {
   /// time has changed and the control view needs to be updated.
   void _onPositionChanged(int position, int duration) {
     setState(() {
-      _progress = position > 0 && position <= duration ? position.toDouble() : 0;
+      _progress =
+          position > 0 && position <= duration ? position.toDouble() : 0;
       _duration = duration > 0 ? duration.toDouble() : 0;
     });
   }
@@ -385,7 +388,8 @@ class _MediaControlsState extends State<_MediaControls> {
   /// and the playback position needs to be updated through the video controller.
   void _onSliderPositionChanged(double position) {
     _onPositionChanged(position.toInt(), _duration.toInt());
-    if (widget.onPositionChanged != null) widget.onPositionChanged!(position.toInt(), _duration.toInt());
+    if (widget.onPositionChanged != null)
+      widget.onPositionChanged!(position.toInt(), _duration.toInt());
     _resetAutoHideTimer();
   }
 
@@ -474,7 +478,8 @@ class _MediaControlsController {
 
   /// Adds callback that receive notifications when the video controller
   /// updates the state.
-  void addControlPressedListener(_ControlPressedCallback controlPressedCallback) {
+  void addControlPressedListener(
+      _ControlPressedCallback controlPressedCallback) {
     _controlPressedCallback = controlPressedCallback;
   }
 
@@ -501,6 +506,7 @@ class _MediaControlsController {
 
   /// Notifies when the video controller changes the playback position.
   void notifyPositionChanged(int position, int duration) {
-    if (_positionChangedCallback != null) _positionChangedCallback!(position, duration);
+    if (_positionChangedCallback != null)
+      _positionChangedCallback!(position, duration);
   }
 }
