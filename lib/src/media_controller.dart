@@ -362,7 +362,7 @@ class _MediaControlsState extends State<_MediaControls> {
           _playing = false;
         });
         break;
-      case _MediaControl.toggle_sound:
+      case _MediaControl.toggleSound:
         setState(() {
           _muted = !_muted;
         });
@@ -436,7 +436,7 @@ class _MediaControlsState extends State<_MediaControls> {
   /// Notifies when the mute button in the media controller has been pressed
   /// and the playback position needs to be updated through the video controller.
   void _mute() {
-    _notifyControlPressed(_MediaControl.toggle_sound);
+    _notifyControlPressed(_MediaControl.toggleSound);
   }
 
   /// Notifies when a control button in pressed.

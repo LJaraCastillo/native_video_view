@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:native_video_view/native_video_view.dart';
 
-void main() => runApp(MaterialApp(home: MyApp()));
+void main() => runApp(const MaterialApp(home: MyApp()));
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -34,13 +36,14 @@ class _MyAppState extends State<MyApp> {
           );
         },
         onPrepared: (controller, info) {
+          debugPrint('NativeVideoView: Video prepared');
           controller.play();
         },
         onError: (controller, what, extra, message) {
-          print('Player Error ($what | $extra | $message)');
+          debugPrint('NativeVideoView: Player Error ($what | $extra | $message)');
         },
         onCompletion: (controller) {
-          print('Video completed');
+          debugPrint('NativeVideoView: Video completed');
         },
       ),
     );

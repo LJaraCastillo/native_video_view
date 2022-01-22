@@ -1,17 +1,18 @@
 package cl.ceisufro.native_video_view
 
-import io.flutter.plugin.common.PluginRegistry
+import android.content.Context
+import androidx.lifecycle.Lifecycle
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.platform.PlatformView
-import java.util.concurrent.atomic.AtomicInteger
 
 class NativeVideoViewBuilder : NativeVideoViewOptionsSink {
     private var useExoPlayer: Boolean = false
 
-    fun build(id: Int, state: AtomicInteger, registrar: PluginRegistry.Registrar): PlatformView {
+    fun build(id: Int, context: Context?, binaryMessenger: BinaryMessenger, lifecycleProvider: LifecycleProvider): PlatformView {
         return if (useExoPlayer) {
-            ExoPlayerController(id, state, registrar)
+            ExoPlayerController(id, context!!, binaryMessenger, lifecycleProvider)
         } else {
-            NativeVideoViewController(id, state, registrar)
+            NativeVideoViewController(id, context!!, binaryMessenger, lifecycleProvider)
         }
     }
 

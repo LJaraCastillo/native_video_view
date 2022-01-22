@@ -4,7 +4,7 @@ part of native_video_view;
 /// controls the [VideoView] in Android and the [AVPlayer] in iOS.
 class VideoViewController {
   /// MethodChannel to call methods from the platform.
-  final MethodChannel channel;
+  final MethodChannel _channel;
 
   /// State of the [StatefulWidget].
   final _NativeVideoViewState _videoViewState;
@@ -24,10 +24,10 @@ class VideoViewController {
 
   /// Constructor of the class.
   VideoViewController._(
-    this.channel,
+    this._channel,
     this._videoViewState,
   ) {
-    channel.setMethodCallHandler(_handleMethodCall);
+    _channel.setMethodCallHandler(_handleMethodCall);
   }
 
   /// Initialize the controller.
@@ -65,7 +65,8 @@ class VideoViewController {
         break;
       case 'player#onPrepared':
         VideoInfo videoInfo = VideoInfo._fromJson(call.arguments);
-        _videoFile = _videoFile?._copyWith(changes: VideoFile._(info: videoInfo));
+        _videoFile =
+            _videoFile?._copyWith(changes: VideoFile._(info: videoInfo));
         _videoViewState.onPrepared(this, videoInfo);
         break;
     }
@@ -94,7 +95,8 @@ class VideoViewController {
   Future<File> _getAssetFile(String asset) async {
     var tempFile = await _createTempFile();
     ByteData data = await rootBundle.load(asset);
-    List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    List<int> bytes =
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     return tempFile.writeAsBytes(bytes);
   }
 
@@ -116,7 +118,7 @@ class VideoViewController {
         tempFile.deleteSync();
         return true;
       } catch (ex) {
-        print(ex);
+        debugPrint("$ex");
       }
     }
     return false;
@@ -125,33 +127,34 @@ class VideoViewController {
   /// Returns the temp file for this instance of the widget.
   Future<File> _getTempFile() async {
     Directory directory = await getTemporaryDirectory();
-    return File("${directory.path}/temp_${channel.name}.mp4");
+    return File("${directory.path}/temp_${_channel.name}.mp4");
   }
 
   /// Sets the video source from a file in the device memory.
-  Future<void> _setVideosSource(String videoSource, VideoSourceType sourceType, bool requestAudioFocus) async {
+  Future<void> _setVideosSource(String videoSource, VideoSourceType sourceType,
+      bool requestAudioFocus) async {
     Map<String, dynamic> args = {
       "videoSource": videoSource,
       "sourceType": sourceType.toString(),
       "requestAudioFocus": requestAudioFocus,
     };
     try {
-      await channel.invokeMethod<void>("player#setVideoSource", args);
+      await _channel.invokeMethod<void>("player#setVideoSource", args);
       _videoFile = VideoFile._(source: videoSource, sourceType: sourceType);
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
   }
 
   /// Starts/resumes the playback of the video.
   Future<bool> play() async {
     try {
-      await channel.invokeMethod("player#start");
+      await _channel.invokeMethod("player#start");
       _startProgressTimer();
       _videoViewState.notifyControlChanged(_MediaControl.play);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
@@ -160,12 +163,12 @@ class VideoViewController {
   /// [play] to resume the playback at any time.
   Future<bool> pause() async {
     try {
-      await channel.invokeMethod("player#pause");
+      await _channel.invokeMethod("player#pause");
       _stopProgressTimer();
       _videoViewState.notifyControlChanged(_MediaControl.pause);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
@@ -173,13 +176,13 @@ class VideoViewController {
   /// Stops the playback of the video.
   Future<bool> stop() async {
     try {
-      await channel.invokeMethod("player#stop");
+      await _channel.invokeMethod("player#stop");
       _stopProgressTimer();
       _onProgressChanged(null);
       _videoViewState.notifyControlChanged(_MediaControl.stop);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
@@ -187,7 +190,7 @@ class VideoViewController {
   /// Gets the current position of time in seconds.
   /// Returns the current position of playback in milliseconds.
   Future<int> currentPosition() async {
-    final result = await channel.invokeMethod("player#currentPosition");
+    final result = await _channel.invokeMethod("player#currentPosition");
     return result['currentPosition'] ?? 0;
   }
 
@@ -198,10 +201,10 @@ class VideoViewController {
   Future<bool> seekTo(int position) async {
     try {
       Map<String, dynamic> args = {"position": position};
-      await channel.invokeMethod<void>("player#seekTo", args);
+      await _channel.invokeMethod<void>("player#seekTo", args);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
@@ -209,7 +212,7 @@ class VideoViewController {
   /// Gets the state of the player.
   /// Returns true if the player is playing or false if is stopped or paused.
   Future<bool?> isPlaying() async {
-    final result = await channel.invokeMethod("player#isPlaying");
+    final result = await _channel.invokeMethod("player#isPlaying");
     return result['isPlaying'];
   }
 
@@ -217,11 +220,11 @@ class VideoViewController {
   /// Returns true if the change was successful or false if an error happened.
   Future<bool> toggleSound() async {
     try {
-      await channel.invokeMethod("player#toggleSound");
-      _videoViewState.notifyControlChanged(_MediaControl.toggle_sound);
+      await _channel.invokeMethod("player#toggleSound");
+      _videoViewState.notifyControlChanged(_MediaControl.toggleSound);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
@@ -230,19 +233,18 @@ class VideoViewController {
   Future<bool> setVolume(double volume) async {
     try {
       Map<String, dynamic> args = {"volume": volume};
-      await channel.invokeMethod("player#setVolume", args);
+      await _channel.invokeMethod("player#setVolume", args);
       return true;
     } catch (ex) {
-      print(ex);
+      debugPrint("$ex");
     }
     return false;
   }
 
   /// Starts the timer that monitor the time progression of the playback.
   void _startProgressTimer() {
-    if (_progressionController == null) {
-      _progressionController = Timer.periodic(Duration(milliseconds: 100), _onProgressChanged);
-    }
+    _progressionController ??=
+        Timer.periodic(const Duration(milliseconds: 100), _onProgressChanged);
   }
 
   /// Stops the progression timer. If [resetCount] is true the elapsed
@@ -259,7 +261,7 @@ class VideoViewController {
   /// state.
   void _onProgressChanged(Timer? timer) async {
     int position = await currentPosition();
-    int duration = this.videoFile?.info?.duration ?? 1000;
+    int duration = videoFile?.info?.duration ?? 1000;
     _videoViewState.onProgress(position, duration);
   }
 }

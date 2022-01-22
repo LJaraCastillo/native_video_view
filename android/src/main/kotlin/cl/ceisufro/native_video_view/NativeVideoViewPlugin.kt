@@ -1,72 +1,85 @@
 package cl.ceisufro.native_video_view
 
-import android.app.Activity
-import android.app.Application
-import android.os.Bundle
-import io.flutter.plugin.common.PluginRegistry.Registrar
-import java.util.concurrent.atomic.AtomicInteger
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.embedding.engine.plugins.lifecycle.FlutterLifecycleAdapter
 
 
-class NativeVideoViewPlugin(registrar: Registrar) : Application.ActivityLifecycleCallbacks {
-    private val state = AtomicInteger(0)
-    private val registrarActivityHashCode: Int = registrar.activity().hashCode()
+class NativeVideoViewPlugin : FlutterPlugin, ActivityAware {
+    private var lifecycle: Lifecycle? = null
 
     companion object {
-        const val CREATED = 1
-        const val STARTED = 2
-        const val RESUMED = 3
-        const val PAUSED = 4
-        const val STOPPED = 5
-        const val DESTROYED = 6
-        @JvmStatic
+        private const val VIEW_TYPE_ID = "native_video_view"
 
-        fun registerWith(registrar: Registrar) {
-            if (registrar.activity() == null) {
-                // When a background flutter view tries to register the plugin, the registrar has no activity.
-                // We stop the registration process as this plugin is foreground only.
-                return
-            }
-            val plugin = NativeVideoViewPlugin(registrar)
-            registrar.activity().application.registerActivityLifecycleCallbacks(plugin)
-            registrar
+        @Suppress("deprecation")
+        fun registerWith(registrar: io.flutter.plugin.common.PluginRegistry.Registrar) {
+            val activity = registrar.activity() ?: return
+            // When a background flutter view tries to register the plugin, the registrar has no activity.
+            // We stop the registration process as this plugin is foreground only.
+
+            if (activity is LifecycleOwner) {
+                registrar
                     .platformViewRegistry()
-                    .registerViewFactory("native_video_view",
-                            NativeVideoViewFactory(plugin.state, registrar))
+                    .registerViewFactory(
+                        VIEW_TYPE_ID,
+                        NativeVideoViewFactory(
+                            registrar.messenger(),
+                            object : LifecycleProvider {
+                                override fun getLifecycle(): Lifecycle {
+                                    return (activity as LifecycleOwner).lifecycle
+                                }
+                            })
+                    )
+            } else {
+                registrar
+                    .platformViewRegistry()
+                    .registerViewFactory(
+                        VIEW_TYPE_ID,
+                        NativeVideoViewFactory(
+                            registrar.messenger(),
+                            ProxyLifecycleProvider(activity)
+                        )
+                    )
+            }
         }
     }
 
-    override fun onActivityCreated(activity: Activity?, p1: Bundle?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        state.set(CREATED)
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        binding
+            .platformViewRegistry
+            .registerViewFactory(
+                VIEW_TYPE_ID,
+                NativeVideoViewFactory(
+                    binding.binaryMessenger,
+                    object : LifecycleProvider {
+                        override fun getLifecycle(): Lifecycle? {
+                            return lifecycle
+                        }
+                    })
+            )
     }
 
-    override fun onActivityResumed(activity: Activity?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        state.set(RESUMED)
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        // Not implemented
     }
 
-    override fun onActivityStarted(activity: Activity?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        state.set(STARTED)
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        lifecycle = FlutterLifecycleAdapter.getActivityLifecycle(binding)
     }
 
-    override fun onActivityPaused(activity: Activity?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        state.set(PAUSED)
+    override fun onDetachedFromActivity() {
+        lifecycle = null
     }
 
-    override fun onActivityStopped(activity: Activity?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        state.set(STOPPED)
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        onAttachedToActivity(binding)
     }
 
-    override fun onActivityDestroyed(activity: Activity?) {
-        if (activity.hashCode() != registrarActivityHashCode) return
-        activity?.application?.unregisterActivityLifecycleCallbacks(this)
-        state.set(DESTROYED)
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity?, bundle: Bundle?) {
-        // Not Implemented
+    override fun onDetachedFromActivityForConfigChanges() {
+        onDetachedFromActivity()
     }
 }
+

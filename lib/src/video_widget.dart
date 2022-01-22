@@ -259,7 +259,7 @@ class _NativeVideoViewState extends State<NativeVideoView> {
           notifyPlayerPosition(newPosition, duration);
         }
         break;
-      case _MediaControl.toggle_sound:
+      case _MediaControl.toggleSound:
         controller.toggleSound();
         break;
     }
