@@ -70,9 +70,10 @@ class VideoInfo {
   final int? duration;
 
   /// Computes the aspect ratio if the [height] and [width] are not null.
-  double get aspectRatio => height != null && width != null && height! > 0 && width! > 0 //
-      ? width! / height!
-      : 4 / 3;
+  double get aspectRatio =>
+      height != null && width != null && height! > 0 && width! > 0 //
+          ? width! / height!
+          : 4 / 3;
 
   /// Hidden constructor of the class. Only the controller
   /// can create an instance of this class.

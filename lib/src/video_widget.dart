@@ -9,13 +9,15 @@ typedef CompletionCallback = void Function(VideoViewController controller);
 /// Callback that is called when the player had an error trying to load/play
 /// the video source. The values [what] and [extra] are Android exclusives and
 /// [message] is iOS exclusive.
-typedef ErrorCallback = void Function(VideoViewController controller, int what, int extra, String? message);
+typedef ErrorCallback = void Function(
+    VideoViewController controller, int what, int extra, String? message);
 
 /// Callback that is called when the player finished loading the video
 /// source and is prepared to start the playback. The [controller]
 /// and [videoInfo] is given as parameters when the function is called.
 /// The [videoInfo] parameter contains info related to the file loaded.
-typedef PreparedCallback = void Function(VideoViewController controller, VideoInfo videoInfo);
+typedef PreparedCallback = void Function(
+    VideoViewController controller, VideoInfo videoInfo);
 
 /// Callback that indicates the progression of the media being played.
 typedef ProgressionCallback = void Function(int elapsedTime, int duration);
@@ -96,7 +98,8 @@ class NativeVideoView extends StatefulWidget {
 class _NativeVideoViewState extends State<NativeVideoView> {
   /// Completer that is finished when [onPlatformViewCreated]
   /// is called and the controller created.
-  final Completer<VideoViewController> _controller = Completer<VideoViewController>();
+  final Completer<VideoViewController> _controller =
+      Completer<VideoViewController>();
 
   /// Value of the aspect ratio. Changes depending of the
   /// loaded file.
@@ -173,7 +176,8 @@ class _NativeVideoViewState extends State<NativeVideoView> {
 
   /// Callback that is called when the view is created in the platform.
   Future<void> onPlatformViewCreated(int id) async {
-    final VideoViewController controller = await VideoViewController.init(id, this);
+    final VideoViewController controller =
+        await VideoViewController.init(id, this);
     _controller.complete(controller);
     widget.onCreated(controller);
   }
@@ -194,19 +198,23 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   /// Notifies when an action of the player (play, pause & stop) must be
   /// reflected by the media controller view.
   void notifyControlChanged(_MediaControl mediaControl) {
-    if (_mediaController != null) _mediaController!.notifyControlPressed(mediaControl);
+    if (_mediaController != null)
+      _mediaController!.notifyControlPressed(mediaControl);
   }
 
   /// Notifies the player position to the media controller view.
   void notifyPlayerPosition(int position, int duration) {
-    if (_mediaController != null) _mediaController!.notifyPositionChanged(position, duration);
+    if (_mediaController != null)
+      _mediaController!.notifyPositionChanged(position, duration);
   }
 
   /// Function that is called when the platform notifies that an error has
   /// occurred during the video source loading.
   /// This function calls the widget's [ErrorCallback] instance.
-  void onError(VideoViewController controller, int what, int extra, String? message) {
-    if (widget.onError != null) widget.onError!(controller, what, extra, message);
+  void onError(
+      VideoViewController controller, int what, int extra, String? message) {
+    if (widget.onError != null)
+      widget.onError!(controller, what, extra, message);
   }
 
   /// Function that is called when the platform notifies that the video
@@ -245,7 +253,8 @@ class _NativeVideoViewState extends State<NativeVideoView> {
         int? duration = controller.videoFile?.info?.duration;
         int position = await controller.currentPosition();
         if (duration != null && position != -1) {
-          int newPosition = position + 3000 > duration ? duration : position + 3000;
+          int newPosition =
+              position + 3000 > duration ? duration : position + 3000;
           controller.seekTo(newPosition);
           notifyPlayerPosition(newPosition, duration);
         }

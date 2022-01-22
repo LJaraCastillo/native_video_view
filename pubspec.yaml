@@ -11,8 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  path_provider: any
-  flutter_plugin_android_lifecycle: any
+  path_provider: ^2.0.8
+  flutter_plugin_android_lifecycle: ^2.0.5
 
 dev_dependencies:
   flutter_test:
