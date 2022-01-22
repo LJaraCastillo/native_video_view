@@ -1,40 +1,40 @@
 package cl.ceisufro.native_video_view
 
-import android.app.Activity
-import android.app.Application
+import android.content.Context
+import android.media.AudioManager
 import android.media.MediaPlayer
-import android.os.Bundle
+import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.VideoView
 import androidx.constraintlayout.widget.ConstraintLayout
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.CREATED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.DESTROYED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.RESUMED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STARTED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STOPPED
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.platform.PlatformView
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 
-class NativeVideoViewController(private val id: Int,
-                                activityState: AtomicInteger,
-                                private val registrar: PluginRegistry.Registrar)
-    : Application.ActivityLifecycleCallbacks,
-        MethodChannel.MethodCallHandler,
-        PlatformView,
-        MediaPlayer.OnPreparedListener,
-        MediaPlayer.OnErrorListener,
-        MediaPlayer.OnCompletionListener {
-    private val methodChannel: MethodChannel = MethodChannel(registrar.messenger(), "native_video_view_$id")
-    private val registrarActivityHashCode: Int
+class NativeVideoViewController(
+    private val id: Int,
+    private val context: Context,
+    binaryMessenger: BinaryMessenger,
+    private val lifecycleProvider: LifecycleProvider
+) : DefaultLifecycleObserver,
+    MethodChannel.MethodCallHandler,
+    PlatformView,
+    MediaPlayer.OnPreparedListener,
+    MediaPlayer.OnErrorListener,
+    MediaPlayer.OnCompletionListener {
+    private val methodChannel: MethodChannel =
+        MethodChannel(binaryMessenger, "native_video_view_$id")
+    private val lifeCycleHashcode: Int
     private val constraintLayout: ConstraintLayout
-    private var videoView: CustomVideoView? = null
+    private var videoView: VideoView? = null
     private var dataSource: String? = null
     private var disposed: Boolean = false
     private var requestAudioFocus: Boolean = true
@@ -45,32 +45,10 @@ class NativeVideoViewController(private val id: Int,
 
     init {
         this.methodChannel.setMethodCallHandler(this)
-        this.registrarActivityHashCode = registrar.activity().hashCode()
-        this.constraintLayout = LayoutInflater.from(registrar.activity())
-                .inflate(R.layout.video_layout, null) as ConstraintLayout
-        when (activityState.get()) {
-            STOPPED -> {
-                stopPlayback()
-            }
-            PAUSED -> {
-                pausePlayback()
-            }
-            RESUMED -> {
-                // Not implemented
-            }
-            STARTED -> {
-                // Not implemented
-            }
-            CREATED -> {
-                configurePlayer()
-            }
-            DESTROYED -> {
-                // Not implemented
-            }
-            else -> throw IllegalArgumentException(
-                    "Cannot interpret " + activityState.get() + " as an activity state")
-        }
-        registrar.activity().application.registerActivityLifecycleCallbacks(this)
+        this.lifeCycleHashcode = lifecycleProvider.getLifecycle().hashCode()
+        this.constraintLayout = LayoutInflater.from(context)
+            .inflate(R.layout.video_layout, null) as ConstraintLayout
+        lifecycleProvider.getLifecycle()!!.addObserver(this)
     }
 
     override fun getView(): View {
@@ -82,8 +60,8 @@ class NativeVideoViewController(private val id: Int,
         disposed = true
         methodChannel.setMethodCallHandler(null)
         this.destroyVideoView()
-        registrar.activity().application.unregisterActivityLifecycleCallbacks(this)
-        Log.d("NVV", "Disposed view $id")
+        lifecycleProvider.getLifecycle()!!.removeObserver(this)
+        Log.d("NVV#NativeView", "Disposed view $id")
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -94,7 +72,8 @@ class NativeVideoViewController(private val id: Int,
                 requestAudioFocus = call.argument("requestAudioFocus") as Boolean? ?: true
                 if (videoPath != null) {
                     if (sourceType.equals("VideoSourceType.asset")
-                            || sourceType.equals("VideoSourceType.file")) {
+                        || sourceType.equals("VideoSourceType.file")
+                    ) {
                         initVideo("file://$videoPath")
                     } else {
                         initVideo(videoPath)
@@ -147,35 +126,27 @@ class NativeVideoViewController(private val id: Int,
         }
     }
 
-    override fun onActivityCreated(activity: Activity?, p1: Bundle?) {
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
         this.configurePlayer()
     }
 
-    override fun onActivityStarted(activity: Activity?) {
-        // Not implemented
-    }
-
-    override fun onActivityResumed(activity: Activity?) {
-        // Not implemented
-    }
-
-    override fun onActivityPaused(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onPause(owner: LifecycleOwner) {
+        super.onPause(owner)
+        if (disposed) return
         this.pausePlayback()
     }
 
-    override fun onActivityStopped(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        if (disposed) return
         this.stopPlayback()
     }
 
-    override fun onActivityDestroyed(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
+        if (disposed) return
         this.destroyVideoView()
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity?, p1: Bundle?) {
-        // Not implemented
     }
 
     private fun configurePlayer() {
@@ -184,14 +155,16 @@ class NativeVideoViewController(private val id: Int,
         videoView?.setOnErrorListener(this)
         videoView?.setOnCompletionListener(this)
         videoView?.setZOrderOnTop(true)
-        if (requestAudioFocus)
-            videoView?.requestAudioFocus()
+        if (requestAudioFocus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            videoView?.setAudioFocusRequest(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+        }
     }
 
     private fun initVideo(dataSource: String?) {
         this.configurePlayer()
         if (dataSource != null) {
-            this.videoView?.setVideoPath(dataSource)
+            val videoUri = Uri.parse(dataSource)
+            this.videoView?.setVideoURI(videoUri)
             this.dataSource = dataSource
         }
     }

@@ -1,52 +1,44 @@
 package cl.ceisufro.native_video_view
 
-import android.app.Activity
-import android.app.Application
+import android.content.Context
 import android.net.Uri
-import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.SurfaceView
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.CREATED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.DESTROYED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.PAUSED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.RESUMED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STARTED
-import cl.ceisufro.native_video_view.NativeVideoViewPlugin.Companion.STOPPED
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.upstream.DataSource
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.platform.PlatformView
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
+import com.google.android.exoplayer2.upstream.DefaultDataSource.Factory as DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource.Factory as DefaultHttpDataSourceFactory
 
 
-class ExoPlayerController(private val id: Int,
-                          activityState: AtomicInteger,
-                          private val registrar: PluginRegistry.Registrar)
-    : Application.ActivityLifecycleCallbacks,
-        MethodChannel.MethodCallHandler,
-        PlatformView,
-        Player.EventListener {
-    private val methodChannel: MethodChannel = MethodChannel(registrar.messenger(), "native_video_view_$id")
-    private val registrarActivityHashCode: Int
+class ExoPlayerController(
+    private val id: Int,
+    private val context: Context,
+    binaryMessenger: BinaryMessenger,
+    private val lifecycleProvider: LifecycleProvider
+) : DefaultLifecycleObserver,
+    MethodChannel.MethodCallHandler,
+    PlatformView,
+    Player.Listener {
+    private val methodChannel: MethodChannel =
+        MethodChannel(binaryMessenger, "native_video_view_$id")
+    private val lifeCycleHashcode: Int
     private val constraintLayout: ConstraintLayout
     private val surfaceView: SurfaceView
-    private val exoPlayer: SimpleExoPlayer
+    private val exoPlayer: ExoPlayer
     private var dataSource: String? = null
     private var requestAudioFocus: Boolean = true
     private var volume: Double = 1.0
@@ -56,37 +48,15 @@ class ExoPlayerController(private val id: Int,
 
     init {
         this.methodChannel.setMethodCallHandler(this)
-        this.registrarActivityHashCode = registrar.activity().hashCode()
-        this.constraintLayout = LayoutInflater.from(registrar.activity())
-                .inflate(R.layout.exoplayer_layout, null) as ConstraintLayout
+        this.lifeCycleHashcode = lifecycleProvider.getLifecycle().hashCode()
+        this.constraintLayout = LayoutInflater.from(context)
+            .inflate(R.layout.exoplayer_layout, null) as ConstraintLayout
         this.surfaceView = constraintLayout.findViewById(R.id.exo_player_surface_view)
-        val trackSelector = DefaultTrackSelector(registrar.activity())
-        this.exoPlayer = SimpleExoPlayer.Builder(registrar.activity())
-                .setTrackSelector(trackSelector)
-                .build()
-        when (activityState.get()) {
-            STOPPED -> {
-                stopPlayback()
-            }
-            PAUSED -> {
-                pausePlayback()
-            }
-            RESUMED -> {
-                // Not implemented
-            }
-            STARTED -> {
-                // Not implemented
-            }
-            CREATED -> {
-                configurePlayer()
-            }
-            DESTROYED -> {
-                // Not implemented
-            }
-            else -> throw IllegalArgumentException(
-                    "Cannot interpret " + activityState.get() + " as an activity state")
-        }
-        registrar.activity().application.registerActivityLifecycleCallbacks(this)
+        val trackSelector = DefaultTrackSelector(context)
+        this.exoPlayer = ExoPlayer.Builder(context)
+            .setTrackSelector(trackSelector)
+            .build()
+        lifecycleProvider.getLifecycle()!!.addObserver(this)
     }
 
     override fun getView(): View {
@@ -98,8 +68,8 @@ class ExoPlayerController(private val id: Int,
         disposed = true
         methodChannel.setMethodCallHandler(null)
         this.destroyVideoView()
-        registrar.activity().application.unregisterActivityLifecycleCallbacks(this)
-        Log.d("VIDEO. NVV", "Disposed view $id")
+        lifecycleProvider.getLifecycle()!!.removeObserver(this)
+        Log.d("NVV#ExoPlayer", "Disposed view $id")
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -110,7 +80,8 @@ class ExoPlayerController(private val id: Int,
                 requestAudioFocus = call.argument("requestAudioFocus") as Boolean? ?: true
                 if (videoPath != null) {
                     if (sourceType.equals("VideoSourceType.asset")
-                            || sourceType.equals("VideoSourceType.file")) {
+                        || sourceType.equals("VideoSourceType.file")
+                    ) {
                         initVideo("file://$videoPath")
                     } else {
                         initVideo(videoPath)
@@ -163,35 +134,27 @@ class ExoPlayerController(private val id: Int,
         }
     }
 
-    override fun onActivityCreated(activity: Activity?, p1: Bundle?) {
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
         this.configurePlayer()
     }
 
-    override fun onActivityStarted(activity: Activity?) {
-        // Not implemented
-    }
-
-    override fun onActivityResumed(activity: Activity?) {
-        // Not implemented
-    }
-
-    override fun onActivityPaused(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onPause(owner: LifecycleOwner) {
+        super.onPause(owner)
+        if (disposed) return
         this.pausePlayback()
     }
 
-    override fun onActivityStopped(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        if (disposed) return
         this.stopPlayback()
     }
 
-    override fun onActivityDestroyed(activity: Activity?) {
-        if (disposed || activity.hashCode() != registrarActivityHashCode) return
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
+        if (disposed) return
         this.destroyVideoView()
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity?, p1: Bundle?) {
-        // Not implemented
     }
 
     private fun configurePlayer() {
@@ -210,9 +173,9 @@ class ExoPlayerController(private val id: Int,
 
     private fun getAudioAttributes(): AudioAttributes {
         return AudioAttributes.Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.CONTENT_TYPE_MOVIE)
-                .build()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.CONTENT_TYPE_MOVIE)
+            .build()
     }
 
     private fun configureVolume() {
@@ -229,10 +192,12 @@ class ExoPlayerController(private val id: Int,
             val uri = Uri.parse(dataSource)
             val dataSourceFactory = getDataSourceFactory(uri)
             val mediaSource = ProgressiveMediaSource
-                    .Factory(dataSourceFactory, DefaultExtractorsFactory())
-                    .createMediaSource(uri)
+                .Factory(dataSourceFactory, DefaultExtractorsFactory())
+                .createMediaSource(MediaItem.fromUri(uri))
             this.exoPlayer.playWhenReady = false
-            this.exoPlayer.prepare(mediaSource)
+            this.exoPlayer.setMediaSource(mediaSource)
+            this.exoPlayer.prepare()
+            playerState = PlayerState.PREPARED
             this.dataSource = dataSource
         }
     }
@@ -240,14 +205,9 @@ class ExoPlayerController(private val id: Int,
     private fun getDataSourceFactory(uri: Uri): DataSource.Factory {
         val scheme: String? = uri.scheme
         return if (scheme != null && (scheme == "http" || scheme == "https")) {
-            DefaultHttpDataSourceFactory(
-                    "ExoPlayer",
-                    null,
-                    DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
-                    DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS,
-                    true)
+            DefaultHttpDataSourceFactory()
         } else {
-            DefaultDataSourceFactory(registrar.activity(), "ExoPlayer")
+            DefaultDataSourceFactory(context)
         }
     }
 
@@ -264,17 +224,19 @@ class ExoPlayerController(private val id: Int,
     }
 
     private fun pausePlayback() {
-        exoPlayer.stop()
+        exoPlayer.playWhenReady = false
         playerState = PlayerState.PAUSED
     }
 
     private fun stopPlayback() {
-        exoPlayer.stop(true)
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
         playerState = PlayerState.NOT_INITIALIZED
     }
 
     private fun destroyVideoView() {
-        exoPlayer.stop(true)
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
         exoPlayer.removeListener(this)
         exoPlayer.release()
     }
@@ -287,7 +249,6 @@ class ExoPlayerController(private val id: Int,
             arguments["width"] = videoFormat.width
             arguments["duration"] = exoPlayer.duration
         }
-        playerState = PlayerState.PREPARED
         methodChannel.invokeMethod("player#onPrepared", arguments)
     }
 
@@ -299,17 +260,18 @@ class ExoPlayerController(private val id: Int,
             configureVolume()
             if (playerState == PlayerState.PLAY_WHEN_READY) {
                 this.startPlayback()
-            } else {
+            } else if (playerState == PlayerState.PREPARED) {
                 notifyPlayerPrepared()
             }
         }
     }
 
-    override fun onPlayerError(error: ExoPlaybackException) {
+    override fun onPlayerError(error: PlaybackException) {
+        super.onPlayerError(error)
         dataSource = null
         playerState = PlayerState.NOT_INITIALIZED
         val arguments = HashMap<String, Any>()
-        arguments["what"] = error.type
+        arguments["what"] = error.errorCodeName
         arguments["extra"] = error.message ?: ""
         methodChannel.invokeMethod("player#onError", arguments)
     }

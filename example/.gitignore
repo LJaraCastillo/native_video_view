@@ -24,6 +24,7 @@
 **/doc/api/
 .dart_tool/
 .flutter-plugins
+.flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
@@ -65,6 +66,7 @@
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 **/IDEWorkspaceChecks.plist
+*.podspec
 
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3
