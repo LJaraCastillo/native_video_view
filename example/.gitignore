@@ -66,6 +66,7 @@
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 **/IDEWorkspaceChecks.plist
+*.podspec
 
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3

@@ -178,7 +178,7 @@ class VideoViewController {
     try {
       await _channel.invokeMethod("player#stop");
       _stopProgressTimer();
-      _onProgressChanged(null);
+      _resetProgressPosition();
       _videoViewState.notifyControlChanged(_MediaControl.stop);
       return true;
     } catch (ex) {
@@ -244,7 +244,7 @@ class VideoViewController {
   /// Starts the timer that monitor the time progression of the playback.
   void _startProgressTimer() {
     _progressionController ??=
-        Timer.periodic(const Duration(milliseconds: 100), _onProgressChanged);
+        Timer.periodic(const Duration(milliseconds: 200), _onProgressChanged);
   }
 
   /// Stops the progression timer. If [resetCount] is true the elapsed
@@ -259,9 +259,17 @@ class VideoViewController {
   /// Callback called by the timer when an event is called.
   /// Updates the elapsed time counter and notifies the widget
   /// state.
-  void _onProgressChanged(Timer? timer) async {
-    int position = await currentPosition();
-    int duration = videoFile?.info?.duration ?? 1000;
-    _videoViewState.onProgress(position, duration);
+  Future _onProgressChanged(Timer? timer) async {
+    if((_progressionController?.isActive ?? false)) {
+      int position = await currentPosition();
+      int duration = videoFile?.info?.duration ?? 1000;
+      _videoViewState.onProgress(position, duration);
+    }
+  }
+
+  /// Resets the progress bar to the start.
+  void _resetProgressPosition() {
+      int duration = videoFile?.info?.duration ?? 1000;
+      _videoViewState.onProgress(0, duration);
   }
 }
