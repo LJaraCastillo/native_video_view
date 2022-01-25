@@ -172,8 +172,8 @@ class NativeVideoViewController(
     private fun startPlayback() {
         if (playerState != PlayerState.PLAYING && dataSource != null) {
             if (playerState != PlayerState.NOT_INITIALIZED) {
-                videoView?.start()
                 playerState = PlayerState.PLAYING
+                videoView?.start()
             } else {
                 playerState = PlayerState.PLAY_WHEN_READY
                 initVideo(dataSource)
@@ -201,6 +201,16 @@ class NativeVideoViewController(
         videoView?.setOnCompletionListener(null)
     }
 
+    private fun configureVolume() {
+        if (mediaPlayer != null) {
+            if (mute) {
+                mediaPlayer?.setVolume(0f, 0f)
+            } else {
+                mediaPlayer?.setVolume(volume.toFloat(), volume.toFloat())
+            }
+        }
+    }
+
     override fun onCompletion(mediaPlayer: MediaPlayer?) {
         this.mediaPlayer = null
         stopPlayback()
@@ -216,16 +226,6 @@ class NativeVideoViewController(
         arguments["extra"] = extra
         methodChannel.invokeMethod("player#onError", arguments)
         return true
-    }
-
-    private fun configureVolume() {
-        if (mediaPlayer != null) {
-            if (mute) {
-                mediaPlayer?.setVolume(0f, 0f)
-            } else {
-                mediaPlayer?.setVolume(volume.toFloat(), volume.toFloat())
-            }
-        }
     }
 
     override fun onPrepared(mediaPlayer: MediaPlayer?) {

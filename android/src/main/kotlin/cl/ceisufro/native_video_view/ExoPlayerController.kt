@@ -214,8 +214,8 @@ class ExoPlayerController(
     private fun startPlayback() {
         if (playerState != PlayerState.PLAYING && dataSource != null) {
             if (playerState != PlayerState.NOT_INITIALIZED) {
-                exoPlayer.playWhenReady = true
                 playerState = PlayerState.PLAYING
+                exoPlayer.playWhenReady = true
             } else {
                 playerState = PlayerState.PLAY_WHEN_READY
                 initVideo(dataSource)
@@ -224,8 +224,8 @@ class ExoPlayerController(
     }
 
     private fun pausePlayback() {
-        exoPlayer.playWhenReady = false
         playerState = PlayerState.PAUSED
+        exoPlayer.playWhenReady = false
     }
 
     private fun stopPlayback() {
@@ -241,15 +241,14 @@ class ExoPlayerController(
         exoPlayer.release()
     }
 
-    private fun notifyPlayerPrepared() {
+    override fun onPlayerError(error: PlaybackException) {
+        super.onPlayerError(error)
+        dataSource = null
+        playerState = PlayerState.NOT_INITIALIZED
         val arguments = HashMap<String, Any>()
-        val videoFormat = exoPlayer.videoFormat
-        if (videoFormat != null) {
-            arguments["height"] = videoFormat.height
-            arguments["width"] = videoFormat.width
-            arguments["duration"] = exoPlayer.duration
-        }
-        methodChannel.invokeMethod("player#onPrepared", arguments)
+        arguments["what"] = error.errorCodeName
+        arguments["extra"] = error.message ?: ""
+        methodChannel.invokeMethod("player#onError", arguments)
     }
 
     override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
@@ -266,13 +265,15 @@ class ExoPlayerController(
         }
     }
 
-    override fun onPlayerError(error: PlaybackException) {
-        super.onPlayerError(error)
-        dataSource = null
-        playerState = PlayerState.NOT_INITIALIZED
+    private fun notifyPlayerPrepared() {
         val arguments = HashMap<String, Any>()
-        arguments["what"] = error.errorCodeName
-        arguments["extra"] = error.message ?: ""
-        methodChannel.invokeMethod("player#onError", arguments)
+        val videoFormat = exoPlayer.videoFormat
+        if (videoFormat != null) {
+            arguments["height"] = videoFormat.height
+            arguments["width"] = videoFormat.width
+            arguments["duration"] = exoPlayer.duration
+        }
+        methodChannel.invokeMethod("player#onPrepared", arguments)
     }
+
 }
