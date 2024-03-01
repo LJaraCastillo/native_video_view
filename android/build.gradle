@@ -2,7 +2,7 @@ group 'cl.ceisufro.native_video_view'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.8.10'
     repositories {
         google()
         mavenCentral()
@@ -32,6 +32,9 @@ android {
     }
     defaultConfig {
         minSdkVersion 21
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
     lintOptions {
         disable 'InvalidPackage'
