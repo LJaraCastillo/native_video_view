@@ -128,9 +128,9 @@ public class NativeVideoViewController: NSObject, FlutterPlatformView {
     func handleAudioFocus(){
         do {
             if requestAudioFocus {
-                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryAmbient)
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.ambient)
             } else {
-                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback)
             }
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
